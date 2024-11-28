@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get "dashboard/index"
   root :to => 'home#index'
   get '/products', :to => 'products#index'
   mount ShopifyApp::Engine, at: '/'
@@ -14,4 +15,6 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+
+  get 'dashboard', to: 'dashboard#index', as: :dashboard
 end

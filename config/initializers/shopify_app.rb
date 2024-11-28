@@ -3,10 +3,10 @@ ShopifyApp.configure do |config|
   config.old_secret = ""
   config.scope = "read_products, read_orders" # Consult this page for more scope options:
                                   # https://help.shopify.com/en/api/getting-started/authentication/oauth/scopes
-  config.embedded_app = true
+  config.embedded_app = false
   config.new_embedded_auth_strategy = true
 
-  config.after_authenticate_job = false
+  config.after_authenticate_job = { job: 'AfterAuthenticateJob' }
   config.api_version = "2024-10"
   config.shop_session_repository = 'Shop'
   config.log_level = :info
