@@ -1,0 +1,37 @@
+<% if @products.present? %>
+<table class="table table-striped table-hover">
+    <thead class="thead-dark">
+    <tr>
+        <th scope="col">Product ID</th>
+        <th scope="col">Title</th>
+        <th scope="col">Price</th>
+        <th scope="col">Inventory</th>
+    </tr>
+    </thead>
+    <tbody>
+    <% @products.each do |product| %>
+        <tr>
+        <td><%= product["id"] %></td>
+        <td><%= product["title"] %></td>
+        <% if product["variants"].present? && product["variants"]["edges"].first.present? %>
+            <td><%= product["variants"]["edges"].first["node"]["price"] %></td>
+            <td><%= product["variants"]["edges"].first["node"]["inventoryQuantity"] %></td>
+        <% else %>
+            <td colspan="2">No variant data</td>
+        <% end %>
+        </tr>
+    <% end %>
+    </tbody>
+</table>
+
+<div class="d-flex justify-content-between">
+    <% if @page_info.present? && @page_info["hasPreviousPage"] %>
+        <%= link_to 'Previous Page', shopify_products_path(before: @page_info["startCursor"]), class: 'btn btn-secondary' %>
+    <% end %>
+    <% if @page_info.present? && @page_info["hasNextPage"]  %>
+        <%= link_to 'Next Page', shopify_products_path(after: @page_info["endCursor"]), class: 'btn btn-primary' %>
+    <% end %>
+</div>
+<% else %>
+<p class="text-warning">No products found.</p>
+<% end %>

@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get "shopify_products/index"
   get "dashboard/index"
   root :to => 'home#index'
   get '/products', :to => 'products#index'
@@ -17,4 +18,5 @@ Rails.application.routes.draw do
   # root "posts#index"
 
   get 'dashboard', to: 'dashboard#index', as: :dashboard
+  get 'shopify_products', to: 'shopify_products#index', as: :shopify_products
 end

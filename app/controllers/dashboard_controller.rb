@@ -1,6 +1,6 @@
 class DashboardController < AuthenticatedController
+  layout 'authenticated'
 
   def index
-    @products = ShopifyAPI::Product.all(limit: 10)
   end
 end
