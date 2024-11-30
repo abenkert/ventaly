@@ -47,9 +47,5 @@ class ShopifyProductsController < AuthenticatedController
     response = client.query(query: query, variables: pagination_params)
     @products = response.body["data"]["products"]["edges"].map { |edge| edge["node"] }
     @page_info = response.body["data"]["products"]["pageInfo"]
-
-    # Log cursor information for debugging
-    logger.debug "Start Cursor: #{@page_info['startCursor']}"
-    logger.debug "End Cursor: #{@page_info['endCursor']}"
   end
 end
