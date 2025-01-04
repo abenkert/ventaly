@@ -5,6 +5,7 @@ Rails.application.configure do
   config.hosts = (config.hosts rescue []) << /[-\w]+\.ngrok\.io/
   # Allow Cloudflare tunnels for secure Shopify OAuth redirects
   config.hosts = (config.hosts rescue []) << /[-\w]+\.trycloudflare\.com/
+  config.hosts << "heroic-wahoo-new.ngrok-free.app"
   # Settings specified here will take precedence over those in config/application.rb.
 
   # Make code changes take effect immediately without server restart.

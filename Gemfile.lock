@@ -411,6 +411,7 @@ DEPENDENCIES
   capybara
   debug
   dotenv-rails
+  httparty
   importmap-rails
   jbuilder
   kamal

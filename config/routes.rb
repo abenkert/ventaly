@@ -3,6 +3,10 @@ Rails.application.routes.draw do
   get "dashboard/index"
   root :to => 'home#index'
   get '/products', :to => 'products#index'
+  # config/routes.rb
+  get 'ebay/auth', to: 'ebay#auth'
+  get 'ebay/callback', to: 'ebay#callback'
+
   mount ShopifyApp::Engine, at: '/'
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
