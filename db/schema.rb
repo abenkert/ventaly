@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2024_11_28_010805) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_04_160257) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "shopify_ebay_accounts", force: :cascade do |t|
+    t.bigint "shop_id", null: false
+    t.string "ebay_user_id"
+    t.string "access_token"
+    t.string "refresh_token"
+    t.datetime "token_expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["shop_id"], name: "index_shopify_ebay_accounts_on_shop_id"
+  end
 
   create_table "shops", force: :cascade do |t|
     t.string "shopify_domain", null: false
@@ -22,4 +33,6 @@ ActiveRecord::Schema[8.0].define(version: 2024_11_28_010805) do
     t.string "access_scopes", default: "", null: false
     t.index ["shopify_domain"], name: "index_shops_on_shopify_domain", unique: true
   end
+
+  add_foreign_key "shopify_ebay_accounts", "shops"
 end

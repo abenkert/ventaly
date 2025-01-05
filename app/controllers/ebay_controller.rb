@@ -1,4 +1,6 @@
-class EbayController < ApplicationController
+class EbayController < AuthenticatedController
+    layout 'authenticated'
+    
     def auth
       service = EbayOauthService.new
       redirect_to service.authorization_url, allow_other_host: true
@@ -7,7 +9,8 @@ class EbayController < ApplicationController
     def callback
       auth_code = params[:code]
       if auth_code.nil?
-        render json: { error: 'Authorization code is missing' }, status: :bad_request
+        flash[:alert] = 'Authorization code is missing'
+        redirect_to dashboard_path
         return
       end
 
@@ -15,12 +18,32 @@ class EbayController < ApplicationController
       response = service.fetch_access_token(auth_code)
 
       if response.code == 200
-        # Store the access token and use it for API requests
         access_token = response.parsed_response['access_token']
-        render json: { access_token: access_token }
+        refresh_token = response.parsed_response['refresh_token']
+        expires_in = response.parsed_response['expires_in']
+
+        shop_domain = current_shopify_domain
+        shop = Shop.find_by(shopify_domain: shop_domain)
+
+        linked_ebay_account = ShopifyEbayAccount.find_by(shop: shop)    
+
+        if linked_ebay_account
+          flash[:alert] = 'eBay account already linked.'
+        elsif shop
+          shop.create_shopify_ebay_account!(
+            access_token: access_token,
+            refresh_token: refresh_token,
+            token_expires_at: Time.current + expires_in.seconds
+          )
+          flash[:notice] = 'eBay account linked successfully!'
+        else
+          flash[:alert] = 'Shop not found. Please try again.'
+        end
       else
-        render json: { error: response.parsed_response }, status: :unprocessable_entity
+        flash[:alert] = 'Failed to link eBay account. Please try again.'
       end
+
+      redirect_to dashboard_path
     end
   end
   
