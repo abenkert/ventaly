@@ -23,4 +23,5 @@ Rails.application.routes.draw do
 
   get 'dashboard', to: 'dashboard#index', as: :dashboard
   get 'shopify_products', to: 'shopify_products#index', as: :shopify_products
+  get 'settings', to: 'settings#index', as: :settings
 end

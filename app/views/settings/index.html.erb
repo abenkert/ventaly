@@ -1,0 +1,8 @@
+<h1>Settings</h1>
+
+<% if @ebay_account_linked %>
+  <p>Your eBay account is linked.</p>
+<% else %>
+  <p>Your eBay account is not linked.</p>
+  <%= link_to 'Link eBay Account', ebay_auth_path, class: 'btn btn-primary' %>
+<% end %>

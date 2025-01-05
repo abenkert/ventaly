@@ -21,7 +21,7 @@ class EbayController < AuthenticatedController
         access_token = response.parsed_response['access_token']
         refresh_token = response.parsed_response['refresh_token']
         expires_in = response.parsed_response['expires_in']
-
+        refresh_token_expires_in = response.parsed_response['refresh_token_expires_in']
         shop_domain = current_shopify_domain
         shop = Shop.find_by(shopify_domain: shop_domain)
 
@@ -32,8 +32,9 @@ class EbayController < AuthenticatedController
         elsif shop
           shop.create_shopify_ebay_account!(
             access_token: access_token,
+            access_token_expires_at: Time.current + expires_in.seconds,
             refresh_token: refresh_token,
-            token_expires_at: Time.current + expires_in.seconds
+            refresh_token_expires_at: Time.current + refresh_token_expires_in.seconds
           )
           flash[:notice] = 'eBay account linked successfully!'
         else

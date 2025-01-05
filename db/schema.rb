@@ -10,18 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_04_160257) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_05_142427) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "shopify_ebay_accounts", force: :cascade do |t|
     t.bigint "shop_id", null: false
-    t.string "ebay_user_id"
     t.string "access_token"
     t.string "refresh_token"
-    t.datetime "token_expires_at"
+    t.datetime "access_token_expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "refresh_token_expires_at"
     t.index ["shop_id"], name: "index_shopify_ebay_accounts_on_shop_id"
   end
 
