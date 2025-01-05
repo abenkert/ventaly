@@ -82,6 +82,10 @@ GEM
       uri (>= 0.13.1)
     addressable (2.8.7)
       public_suffix (>= 2.0.2, < 7.0)
+    akami (1.3.3)
+      base64
+      gyoku (>= 0.4.0)
+      nokogiri
     ast (2.4.2)
     autoprefixer-rails (10.4.19.0)
       execjs (~> 2)
@@ -126,6 +130,12 @@ GEM
     et-orbi (1.2.11)
       tzinfo
     execjs (2.10.0)
+    faraday (2.12.2)
+      faraday-net_http (>= 2.0, < 3.5)
+      json
+      logger
+    faraday-net_http (3.4.0)
+      net-http (>= 0.5.0)
     ffi (1.17.0-aarch64-linux-gnu)
     ffi (1.17.0-arm64-darwin)
     ffi (1.17.0-x86_64-linux-gnu)
@@ -134,11 +144,19 @@ GEM
       raabro (~> 1.4)
     globalid (1.2.1)
       activesupport (>= 6.1)
+    gyoku (1.4.0)
+      builder (>= 2.1.2)
+      rexml (~> 3.0)
     hash_diff (1.1.1)
     httparty (0.22.0)
       csv
       mini_mime (>= 1.0.0)
       multi_xml (>= 0.5.2)
+    httpi (4.0.4)
+      base64
+      mutex_m
+      nkf
+      rack (>= 2.0, < 4)
     i18n (1.14.6)
       concurrent-ruby (~> 1.0)
     importmap-rails (2.0.3)
@@ -183,6 +201,9 @@ GEM
     msgpack (1.7.5)
     multi_xml (0.7.1)
       bigdecimal (~> 3.1)
+    mutex_m (0.3.0)
+    net-http (0.6.0)
+      uri
     net-imap (0.5.1)
       date
       net-protocol
@@ -198,12 +219,15 @@ GEM
       net-protocol
     net-ssh (7.3.0)
     nio4r (2.7.4)
+    nkf (0.2.0)
     nokogiri (1.16.7-aarch64-linux)
       racc (~> 1.4)
     nokogiri (1.16.7-arm64-darwin)
       racc (~> 1.4)
     nokogiri (1.16.7-x86_64-linux)
       racc (~> 1.4)
+    nori (2.7.1)
+      bigdecimal
     oj (3.16.7)
       bigdecimal (>= 3.0)
       ostruct (>= 0.2)
@@ -311,6 +335,15 @@ GEM
       sprockets (> 3.0)
       sprockets-rails
       tilt
+    savon (2.15.1)
+      akami (~> 1.2)
+      builder (>= 2.1.2)
+      gyoku (~> 1.2)
+      httpi (>= 4, < 5)
+      mail (~> 2.5)
+      nokogiri (>= 1.8.1)
+      nori (~> 2.4)
+      wasabi (>= 3.7, < 6)
     securerandom (0.3.2)
     selenium-webdriver (4.27.0)
       base64 (~> 0.2)
@@ -386,6 +419,10 @@ GEM
     unicode-emoji (4.0.4)
     uri (1.0.2)
     useragent (0.16.10)
+    wasabi (5.1.0)
+      addressable
+      faraday (>= 1.9, < 3)
+      nokogiri (>= 1.13.9)
     web-console (4.2.1)
       actionview (>= 6.0.0)
       activemodel (>= 6.0.0)
@@ -421,6 +458,7 @@ DEPENDENCIES
   rails (~> 8.0.0)
   rubocop-rails-omakase
   sassc-rails
+  savon
   selenium-webdriver
   shopify_app
   solid_cable
