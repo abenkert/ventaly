@@ -46,5 +46,14 @@ class EbayController < AuthenticatedController
 
       redirect_to dashboard_path
     end
+
+    # Need to move this to be called from the ebay listings page
+    def import_listings
+      shop = Shop.find_by(shopify_domain: current_shopify_domain)
+      ImportEbayListingsJob.perform_later(shop.id) if shop
+
+      flash[:notice] = 'Importing eBay listings. This may take a few minutes.'
+      redirect_to settings_path
+    end
   end
   
