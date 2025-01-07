@@ -10,12 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_05_150000) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_07_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "ebay_listings", force: :cascade do |t|
-    t.bigint "shop_id", null: false
     t.string "ebay_item_id", null: false
     t.string "title"
     t.text "description"
@@ -23,8 +22,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_05_150000) do
     t.integer "quantity"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["shop_id", "ebay_item_id"], name: "index_ebay_listings_on_shop_id_and_ebay_item_id", unique: true
-    t.index ["shop_id"], name: "index_ebay_listings_on_shop_id"
+    t.bigint "shopify_ebay_account_id", null: false
+    t.index ["shopify_ebay_account_id"], name: "index_ebay_listings_on_shopify_ebay_account_id"
   end
 
   create_table "shopify_ebay_accounts", force: :cascade do |t|
@@ -35,6 +34,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_05_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "refresh_token_expires_at"
+    t.datetime "last_listing_import_at"
     t.index ["shop_id"], name: "index_shopify_ebay_accounts_on_shop_id"
   end
 
@@ -47,6 +47,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_05_150000) do
     t.index ["shopify_domain"], name: "index_shops_on_shopify_domain", unique: true
   end
 
-  add_foreign_key "ebay_listings", "shops"
+  add_foreign_key "ebay_listings", "shopify_ebay_accounts"
   add_foreign_key "shopify_ebay_accounts", "shops"
 end

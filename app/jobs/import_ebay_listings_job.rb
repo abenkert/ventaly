@@ -1,36 +1,72 @@
 class ImportEbayListingsJob < ApplicationJob
   queue_as :default
 
-  def perform(shop_id)
+  def perform(shop_id, last_sync_time = nil)
     shop = Shop.find(shop_id)
     ebay_account = shop.shopify_ebay_account
-
     return unless ebay_account
+
     token_service = EbayTokenService.new(shop)
+    total_imported = 0
+    page = 1
 
-    response = fetch_ebay_listings(token_service.fetch_or_refresh_access_token)
-
-    # if response.success?
-    #   # listings = response.body[:get_my_ebay_selling_response][:active_list][:item_array][:item] || []
-
-    #   # listings.each do |listing|
-    #   #   EbayListing.find_or_create_by(shop: shop, ebay_item_id: listing[:item_id]) do |ebay_listing|
-    #   #     ebay_listing.title = listing[:title]
-    #   #     ebay_listing.description = listing[:description]
-    #   #     ebay_listing.price = listing[:selling_status][:current_price][:value]
-    #   #     ebay_listing.quantity = listing[:quantity]
-    #   #   end
-    #   # end
-    #   pp response
-    # else
-    #   Rails.logger.error("Failed to fetch eBay listings: #{response.body}")
-    # end
+    response = fetch_ebay_listings(token_service.fetch_or_refresh_access_token, page, last_sync_time)
+    
+    # Create namespace for xpath queries
+    namespaces = { 'ns' => 'urn:ebay:apis:eBLBaseComponents' }
+    
+    if response&.at_xpath('//ns:Ack', namespaces)&.text == 'Success'
+      total_pages = 2  # Hardcoded for testing
+      
+      while page <= total_pages
+        items = response.xpath('//ns:Item', namespaces)
+        process_items(items, shop) if items.any?
+        
+        break if page >= total_pages  # Break before incrementing if we're on the last page
+        
+        page += 1
+        response = fetch_ebay_listings(token_service.fetch_or_refresh_access_token, page, last_sync_time)
+        break unless response&.at_xpath('//ns:Ack', namespaces)&.text == 'Success'
+      end
+      
+      ebay_account.update(last_listing_import_at: Time.current)
+      Rails.logger.info("Successfully imported/updated eBay listings. Total pages processed: #{page}")
+    else
+      error_message = response&.at_xpath('//ns:Errors/ns:LongMessage', namespaces)&.text
+      Rails.logger.error("Failed to fetch eBay listings: #{error_message || 'Unknown error'}")
+    end
+  rescue StandardError => e
+    Rails.logger.error("Error processing eBay listings: #{e.message}")
   end
 
   private
 
-  def fetch_ebay_listings(access_token)
+  def process_items(items, shop)
+    namespaces = { 'ns' => 'urn:ebay:apis:eBLBaseComponents' }
+    
+    items.each do |item|
+      ebay_item_id = item.at_xpath('.//ns:ItemID', namespaces)&.text
+      
+      listing = shop.shopify_ebay_account.ebay_listings.find_or_initialize_by(ebay_item_id: ebay_item_id)
+      listing.assign_attributes(
+        title: item.at_xpath('.//ns:Title', namespaces)&.text,
+        description: item.at_xpath('.//ns:Description', namespaces)&.text,
+        price: item.at_xpath('.//ns:CurrentPrice', namespaces)&.text&.to_d,
+        quantity: item.at_xpath('.//ns:Quantity', namespaces)&.text&.to_i
+      )
+      
+      listing.save if listing.changed?
+    end
+  end
+
+  def fetch_ebay_listings(access_token, page_number, modified_after = nil)
     uri = URI('https://api.ebay.com/ws/api.dll')
+
+    # This line belongs after detail level in the xml request
+    # I am removing it for now because we want to import all listings and we need to be careful
+    # about the modified date and dealing with job failures
+    # also the order we recieve listings may be different?
+    # #{modified_after ? "<ModTimeFrom>#{modified_after.iso8601}</ModTimeFrom>" : ""}
     
     xml_request = <<~XML
       <?xml version="1.0" encoding="utf-8"?>
@@ -40,7 +76,7 @@ class ImportEbayListingsJob < ApplicationJob
           <DetailLevel>ReturnAll</DetailLevel>
           <Pagination>
             <EntriesPerPage>1</EntriesPerPage>
-            <PageNumber>1</PageNumber>
+            <PageNumber>#{page_number}</PageNumber>
           </Pagination>
         </ActiveList>
       </GetMyeBaySellingRequest>
@@ -61,14 +97,9 @@ class ImportEbayListingsJob < ApplicationJob
       response = Net::HTTP.post(uri, xml_request, headers)
       Rails.logger.info("Raw response: #{response.body}")
       
-      if response.is_a?(Net::HTTPSuccess)
-        doc = Nokogiri::XML(response.body)
-        # Parse the response here
-        pp doc
-      else
-        Rails.logger.error("Failed to fetch eBay listings: #{response.body}")
-        nil
-      end
+      # Parse the response body regardless of HTTP status
+      # since eBay might send error details in the XML
+      Nokogiri::XML(response.body)
     rescue StandardError => e
       Rails.logger.error("Error fetching eBay listings: #{e.message}")
       nil

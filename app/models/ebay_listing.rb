@@ -1,5 +1,5 @@
 class EbayListing < ApplicationRecord
-  belongs_to :shop
+  belongs_to :shopify_ebay_account
 
-  validates :ebay_item_id, presence: true, uniqueness: { scope: :shop_id }
+  validates :ebay_item_id, presence: true, uniqueness: { scope: :shopify_ebay_account_id }
 end 
