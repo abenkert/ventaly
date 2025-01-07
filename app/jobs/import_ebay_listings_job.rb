@@ -51,7 +51,7 @@ class ImportEbayListingsJob < ApplicationJob
       listing.assign_attributes(
         title: item.at_xpath('.//ns:Title', namespaces)&.text,
         description: item.at_xpath('.//ns:Description', namespaces)&.text,
-        price: item.at_xpath('.//ns:CurrentPrice', namespaces)&.text&.to_d,
+        price: item.at_xpath('.//ns:BuyItNowPrice', namespaces)&.text&.to_d,
         quantity: item.at_xpath('.//ns:Quantity', namespaces)&.text&.to_i
       )
       
@@ -81,7 +81,7 @@ class ImportEbayListingsJob < ApplicationJob
         </ActiveList>
       </GetMyeBaySellingRequest>
     XML
-  
+
     headers = {
       'X-EBAY-API-COMPATIBILITY-LEVEL' => '967',
       'X-EBAY-API-IAF-TOKEN' => access_token,
@@ -92,13 +92,11 @@ class ImportEbayListingsJob < ApplicationJob
       'X-EBAY-API-SITEID' => '0',
       'Content-Type' => 'text/xml'
     }
-  
+
     begin
       response = Net::HTTP.post(uri, xml_request, headers)
       Rails.logger.info("Raw response: #{response.body}")
       
-      # Parse the response body regardless of HTTP status
-      # since eBay might send error details in the XML
       Nokogiri::XML(response.body)
     rescue StandardError => e
       Rails.logger.error("Error fetching eBay listings: #{e.message}")
