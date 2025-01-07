@@ -20,7 +20,7 @@ class EbayOauthService
     body = {
       grant_type: 'authorization_code',
       code: auth_code,
-      redirect_uri: @ru_name # Ensure this is correctly set
+      redirect_uri: @ru_name
     }
     auth = Base64.strict_encode64("#{@client_id}:#{@client_secret}")
   
@@ -37,5 +37,21 @@ class EbayOauthService
     end
   
     response
+  end
+
+  def fetch_access_token_with_refresh_token(refresh_token)
+    body = {
+      grant_type: 'refresh_token',
+      refresh_token: refresh_token
+    }
+    auth = Base64.strict_encode64("#{@client_id}:#{@client_secret}")
+
+    self.class.post('/identity/v1/oauth2/token', {
+      headers: {
+        'Authorization' => "Basic #{auth}",
+        'Content-Type' => 'application/x-www-form-urlencoded'
+      },
+      body: URI.encode_www_form(body)
+    })
   end
 end

@@ -22,6 +22,7 @@ class EbayController < AuthenticatedController
         refresh_token = response.parsed_response['refresh_token']
         expires_in = response.parsed_response['expires_in']
         refresh_token_expires_in = response.parsed_response['refresh_token_expires_in']
+
         shop_domain = current_shopify_domain
         shop = Shop.find_by(shopify_domain: shop_domain)
 
