@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_10_000000) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_10_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -68,6 +68,55 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_10_000000) do
     t.index ["status"], name: "index_kuralis_products_on_status"
   end
 
+  create_table "order_items", force: :cascade do |t|
+    t.bigint "order_id", null: false
+    t.bigint "kuralis_product_id"
+    t.string "title"
+    t.string "sku"
+    t.string "location"
+    t.integer "quantity"
+    t.jsonb "platform_data", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "platform", null: false
+    t.string "platform_item_id"
+    t.index ["kuralis_product_id"], name: "index_order_items_on_kuralis_product_id"
+    t.index ["order_id"], name: "index_order_items_on_order_id"
+    t.index ["platform_item_id"], name: "index_order_items_on_platform_item_id"
+    t.index ["sku"], name: "index_order_items_on_sku"
+  end
+
+  create_table "orders", force: :cascade do |t|
+    t.bigint "shop_id", null: false
+    t.string "platform", null: false
+    t.string "platform_order_id", null: false
+    t.string "platform_order_number"
+    t.string "customer_name"
+    t.jsonb "shipping_address"
+    t.string "status"
+    t.decimal "subtotal", precision: 10, scale: 2
+    t.decimal "shipping_cost", precision: 10, scale: 2
+    t.decimal "total_price", precision: 10, scale: 2
+    t.string "payment_status"
+    t.datetime "paid_at"
+    t.string "fulfillment_status"
+    t.string "tracking_number"
+    t.string "tracking_company"
+    t.datetime "shipped_at"
+    t.jsonb "platform_data", default: {}
+    t.datetime "order_placed_at"
+    t.datetime "last_synced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fulfillment_status"], name: "index_orders_on_fulfillment_status"
+    t.index ["order_placed_at"], name: "index_orders_on_order_placed_at"
+    t.index ["payment_status"], name: "index_orders_on_payment_status"
+    t.index ["platform", "platform_order_id"], name: "index_orders_on_platform_and_platform_order_id", unique: true
+    t.index ["platform_order_number"], name: "index_orders_on_platform_order_number"
+    t.index ["shop_id"], name: "index_orders_on_shop_id"
+    t.index ["status"], name: "index_orders_on_status"
+  end
+
   create_table "shopify_ebay_accounts", force: :cascade do |t|
     t.bigint "shop_id", null: false
     t.string "access_token"
@@ -117,5 +166,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_10_000000) do
   add_foreign_key "kuralis_products", "ebay_listings"
   add_foreign_key "kuralis_products", "shopify_products"
   add_foreign_key "kuralis_products", "shops"
+  add_foreign_key "order_items", "kuralis_products"
+  add_foreign_key "order_items", "orders"
+  add_foreign_key "orders", "shops"
   add_foreign_key "shopify_ebay_accounts", "shops"
 end

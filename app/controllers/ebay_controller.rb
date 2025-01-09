@@ -45,7 +45,12 @@ class EbayController < AuthenticatedController
         flash[:alert] = 'Failed to link eBay account. Please try again.'
       end
 
-      redirect_to dashboard_path
+      # Subscribe to notifications after successful authentication
+      EbayNotificationService.subscribe_to_notifications(shop)
+      
+      redirect_to dashboard_path, notice: 'eBay account connected successfully'
+    rescue StandardError => e
+      redirect_to settings_path, alert: "Failed to connect eBay account: #{e.message}"
     end
 
     # Need to move this to be called from the ebay listings page

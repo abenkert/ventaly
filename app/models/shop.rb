@@ -9,4 +9,12 @@ class Shop < ApplicationRecord
   def api_version
     ShopifyApp.configuration.api_version
   end
+
+  def notification_endpoint_url
+    if Rails.env.production?
+      "https://#{ENV['APP_HOST']}/ebay/notifications"
+    else
+      "https://#{ENV['DEV_APP_HOST']}/ebay/notifications"
+    end
+  end
 end
