@@ -46,6 +46,7 @@ class ShopifyProductsController < AuthenticatedController
 
     response = client.query(query: query, variables: pagination_params)
     @products = response.body["data"]["products"]["edges"].map { |edge| edge["node"] }
+    pp @products.first
     @page_info = response.body["data"]["products"]["pageInfo"]
   end
 end

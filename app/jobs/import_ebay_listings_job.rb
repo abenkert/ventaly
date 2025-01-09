@@ -103,4 +103,48 @@ class ImportEbayListingsJob < ApplicationJob
       nil
     end
   end
+
+  # def fetch_seller_listings(access_token, page_number, start_time_from = nil, start_time_to = nil)
+  #   uri = URI('https://api.ebay.com/ws/api.dll')
+    
+  #   # If no time range is provided, default to last 120 days (eBay's maximum)
+  #   start_time_from ||= 120.days.ago
+  #   start_time_to ||= Time.current
+    
+  #   xml_request = <<~XML
+  #     <?xml version="1.0" encoding="utf-8"?>
+  #     <GetSellerListRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+  #       <DetailLevel>ReturnAll</DetailLevel>
+  #       <StartTimeFrom>#{start_time_from.iso8601}</StartTimeFrom>
+  #       <StartTimeTo>#{start_time_to.iso8601}</StartTimeTo>
+  #       <IncludeDescription>true</IncludeDescription>
+  #       <GranularityLevel>Fine</GranularityLevel>
+  #       <Pagination>
+  #         <EntriesPerPage>1</EntriesPerPage>
+  #         <PageNumber>#{page_number}</PageNumber>
+  #       </Pagination>
+  #     </GetSellerListRequest>
+  #   XML
+
+  #   headers = {
+  #     'X-EBAY-API-COMPATIBILITY-LEVEL' => '967',
+  #     'X-EBAY-API-IAF-TOKEN' => access_token,
+  #     'X-EBAY-API-DEV-NAME' => ENV['EBAY_DEV_ID'],
+  #     'X-EBAY-API-APP-NAME' => ENV['EBAY_CLIENT_ID'],
+  #     'X-EBAY-API-CERT-NAME' => ENV['EBAY_CLIENT_SECRET'],
+  #     'X-EBAY-API-CALL-NAME' => 'GetSellerList',
+  #     'X-EBAY-API-SITEID' => '0',
+  #     'Content-Type' => 'text/xml'
+  #   }
+
+  #   begin
+  #     response = Net::HTTP.post(uri, xml_request, headers)
+  #     Rails.logger.info("Raw response: #{response.body}")
+      
+  #     Nokogiri::XML(response.body)
+  #   rescue StandardError => e
+  #     Rails.logger.error("Error fetching seller listings: #{e.message}")
+  #     nil
+  #   end
+  # end
 end

@@ -9,6 +9,7 @@ class EbayTokenService
       @ebay_account.access_token
     else
       refresh_access_token
+      @ebay_account.access_token
     end
   end
 
