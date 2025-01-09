@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_09_170651) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_10_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -18,11 +18,25 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_09_170651) do
     t.string "ebay_item_id", null: false
     t.string "title"
     t.text "description"
-    t.decimal "price", precision: 10, scale: 2
+    t.decimal "sale_price", precision: 10, scale: 2
     t.integer "quantity"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "shopify_ebay_account_id", null: false
+    t.decimal "original_price", precision: 10, scale: 2
+    t.string "shipping_profile_id"
+    t.string "location"
+    t.jsonb "image_urls", default: []
+    t.string "listing_format"
+    t.string "condition_id"
+    t.string "condition_description"
+    t.string "category_id"
+    t.jsonb "item_specifics", default: {}
+    t.string "listing_duration"
+    t.datetime "end_time"
+    t.boolean "best_offer_enabled", default: false
+    t.string "ebay_status"
+    t.datetime "last_sync_at"
     t.index ["shopify_ebay_account_id"], name: "index_ebay_listings_on_shopify_ebay_account_id"
   end
 
