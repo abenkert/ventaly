@@ -3,6 +3,6 @@ class OrdersController < AuthenticatedController
 
   def index
     @tab = params[:tab] || 'all'
-    @orders = [] # We'll implement order fetching later
+    @orders = Orders::OrderFetcher.new(current_shop, @tab).fetch
   end
 end 

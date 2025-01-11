@@ -6,7 +6,7 @@ class FetchEbayOrdersJob < ApplicationJob
     token = EbayTokenService.new(shop).fetch_or_refresh_access_token
     
     # Fetch recent active orders
-    start_time = 24.hours.ago.iso8601
+    start_time = 48.hours.ago.iso8601
     
     uri = URI('https://api.ebay.com/ws/api.dll')
     
@@ -21,9 +21,7 @@ class FetchEbayOrdersJob < ApplicationJob
     }
 
     response = Net::HTTP.post(uri, xml_request, headers)
-    # process_orders_response(response.body, shop) if response.is_a?(Net::HTTPSuccess)
-    doc = Nokogiri::XML(response.body)
-    pp doc  
+    process_orders_response(response.body, shop) if response.is_a?(Net::HTTPSuccess)
   end
 
   private
@@ -38,6 +36,7 @@ class FetchEbayOrdersJob < ApplicationJob
         <CreateTimeFrom>#{start_time}</CreateTimeFrom>
         <OrderRole>Seller</OrderRole>
         <OrderStatus>Active</OrderStatus>
+        <OrderStatus>Completed</OrderStatus>
         <ListingType>FixedPriceItem</ListingType>
         <DetailLevel>ReturnAll</DetailLevel>
         <Pagination>
@@ -49,59 +48,105 @@ class FetchEbayOrdersJob < ApplicationJob
     XML
   end
 
-  def process_orders_response(response_xml)
-    orders = response_xml.xpath('//xmlns:Order')
+  def process_orders_response(response_xml, shop)
+    doc = Nokogiri::XML(response_xml)
+    doc.remove_namespaces!
+    
+    orders = doc.xpath('//Order')
     
     orders.each do |order_xml|
       # Skip orders that don't have transactions
-      next unless order_xml.at_xpath('.//xmlns:TransactionArray/xmlns:Transaction')
+      next unless order_xml.at_xpath('.//TransactionArray/Transaction')
       
-      order = create_or_update_order(order_xml)
-      process_transactions(order, order_xml)
+      # Skip if tracking number exists
+      has_tracking = order_xml.at_xpath('.//ShipmentTrackingDetails/ShipmentTrackingNumber')
+      next if has_tracking.present?
+      
+      order = create_or_update_order(order_xml, shop)
+      process_order_items(order, order_xml)
     end
   end
 
-  def create_or_update_order(order_xml)
-    order_id = order_xml.at_xpath('.//xmlns:OrderID')&.text
-    ebay_status = order_xml.at_xpath('.//xmlns:OrderStatus')&.text
+  def create_or_update_order(order_xml, shop)
+    order_id = order_xml.at_xpath('.//OrderID')&.text
+    ebay_status = order_xml.at_xpath('.//OrderStatus')&.text
     
     order = Order.find_or_initialize_by(
+      platform: 'ebay',
       platform_order_id: order_id,
-      shop_id: @shop.id
+      shop_id: shop.id
     )
 
-    order.assign_attributes(
+    buyer_node = order_xml.at_xpath('.//TransactionArray/Transaction/Buyer')
+    buyer_name = if buyer_node
+      first_name = buyer_node.at_xpath('.//UserFirstName')&.text
+      last_name = buyer_node.at_xpath('.//UserLastName')&.text
+      "#{first_name} #{last_name}".strip
+    end
+
+    order.assign_attributes({
       status: map_ebay_status(ebay_status),
-      total_price: order_xml.at_xpath('.//xmlns:Total')&.text&.to_d,
-      subtotal_price: order_xml.at_xpath('.//xmlns:Subtotal')&.text&.to_d,
-      shipping_price: order_xml.at_xpath('.//xmlns:ShippingServiceSelected/xmlns:ShippingServiceCost')&.text&.to_d,
-      created_at: order_xml.at_xpath('.//xmlns:CreatedTime')&.text,
-      platform_data: extract_platform_data(order_xml)
-    )
+      total_price: order_xml.at_xpath('.//Total')&.text&.to_d,
+      subtotal: order_xml.at_xpath('.//Subtotal')&.text&.to_d,
+      shipping_cost: order_xml.at_xpath('.//ShippingServiceSelected/ShippingServiceCost')&.text&.to_d,
+      payment_status: order_xml.at_xpath('.//CheckoutStatus/Status')&.text,
+      shipping_address: extract_shipping_address(order_xml),
+      customer_name: buyer_name,
+      order_placed_at: order_xml.at_xpath('.//CreatedTime')&.text
+    })
 
     order.save!
     order
   end
 
-  def process_transactions(order, order_xml)
-    transactions = order_xml.xpath('.//xmlns:TransactionArray/xmlns:Transaction')
+  def extract_shipping_address(order_xml)
+    address = order_xml.at_xpath('.//ShippingAddress')
+    return {} unless address
+
+    {
+      name: address.at_xpath('.//Name')&.text,
+      street1: address.at_xpath('.//Street1')&.text,
+      street2: address.at_xpath('.//Street2')&.text,
+      city: address.at_xpath('.//CityName')&.text,
+      state: address.at_xpath('.//StateOrProvince')&.text,
+      postal_code: address.at_xpath('.//PostalCode')&.text,
+      country: address.at_xpath('.//CountryName')&.text,
+      phone: address.at_xpath('.//Phone')&.text
+    }
+  end
+
+  def process_order_items(order, order_xml)
+    transactions = order_xml.xpath('.//TransactionArray/Transaction')
     
     transactions.each do |transaction|
-      order_item = OrderItem.find_or_initialize_by(
-        order_id: order.id,
-        platform_order_item_id: transaction.at_xpath('.//xmlns:OrderLineItemID')&.text
-      )
-
-      order_item.assign_attributes(
-        title: transaction.at_xpath('.//xmlns:Item/xmlns:Title')&.text,
-        quantity: transaction.at_xpath('.//xmlns:QuantityPurchased')&.text&.to_i,
-        unit_price: transaction.at_xpath('.//xmlns:TransactionPrice')&.text&.to_d,
-        platform_item_id: transaction.at_xpath('.//xmlns:Item/xmlns:ItemID')&.text,
-        platform_data: extract_transaction_data(transaction)
-      )
-
-      order_item.save!
+      item_data = extract_item_data(transaction)
+      create_or_update_order_item(order, item_data)
     end
+  end
+
+  def extract_item_data(transaction)
+    {
+      platform_item_id: transaction.at_xpath('.//Item/ItemID')&.text,
+      title: transaction.at_xpath('.//Item/Title')&.text,
+      quantity: transaction.at_xpath('.//QuantityPurchased')&.text&.to_i,
+      platform_transaction_id: transaction.at_xpath('.//TransactionID')&.text,
+      created_at: transaction.at_xpath('.//CreatedDate')&.text
+    }
+  end
+
+  def create_or_update_order_item(order, item_data)
+    order_item = order.order_items.find_or_initialize_by(
+      platform_item_id: item_data[:platform_item_id],
+      platform: 'ebay'
+    )
+    # We need to implement a call here possibly to get the location of the item?
+    order_item.assign_attributes(
+      title: item_data[:title],
+      quantity: item_data[:quantity],
+    )
+
+    order_item.save!
+    order_item
   end
 
   def map_ebay_status(ebay_status)
@@ -111,36 +156,5 @@ class FetchEbayOrdersJob < ApplicationJob
     when 'Shipped' then 'shipped'
     else 'pending'
     end
-  end
-
-  def extract_platform_data(order_xml)
-    {
-      buyer_username: order_xml.at_xpath('.//xmlns:BuyerUserID')&.text,
-      buyer_email: order_xml.at_xpath('.//xmlns:Buyer/xmlns:Email')&.text,
-      buyer_first_name: order_xml.at_xpath('.//xmlns:Buyer/xmlns:UserFirstName')&.text,
-      buyer_last_name: order_xml.at_xpath('.//xmlns:Buyer/xmlns:UserLastName')&.text,
-      payment_status: order_xml.at_xpath('.//xmlns:CheckoutStatus/xmlns:Status')&.text,
-      payment_method: order_xml.at_xpath('.//xmlns:CheckoutStatus/xmlns:PaymentMethod')&.text,
-      shipping_service: order_xml.at_xpath('.//xmlns:ShippingServiceSelected/xmlns:ShippingService')&.text,
-      shipping_address: {
-        name: order_xml.at_xpath('.//xmlns:ShippingAddress/xmlns:Name')&.text,
-        street1: order_xml.at_xpath('.//xmlns:ShippingAddress/xmlns:Street1')&.text,
-        city: order_xml.at_xpath('.//xmlns:ShippingAddress/xmlns:CityName')&.text,
-        state: order_xml.at_xpath('.//xmlns:ShippingAddress/xmlns:StateOrProvince')&.text,
-        postal_code: order_xml.at_xpath('.//xmlns:ShippingAddress/xmlns:PostalCode')&.text,
-        country: order_xml.at_xpath('.//xmlns:ShippingAddress/xmlns:CountryName')&.text,
-        phone: order_xml.at_xpath('.//xmlns:ShippingAddress/xmlns:Phone')&.text
-      }
-    }
-  end
-
-  def extract_transaction_data(transaction)
-    {
-      transaction_id: transaction.at_xpath('.//xmlns:TransactionID')&.text,
-      item_id: transaction.at_xpath('.//xmlns:Item/xmlns:ItemID')&.text,
-      sales_record_number: transaction.at_xpath('.//xmlns:ShippingDetails/xmlns:SellingManagerSalesRecordNumber')&.text,
-      created_date: transaction.at_xpath('.//xmlns:CreatedDate')&.text,
-      invoice_sent_time: transaction.at_xpath('.//xmlns:InvoiceSentTime')&.text
-    }
   end
 end 

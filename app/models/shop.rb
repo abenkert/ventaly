@@ -5,7 +5,8 @@ class Shop < ApplicationRecord
 
   has_one :shopify_ebay_account, dependent: :destroy
   has_many :kuralis_products, dependent: :destroy
-
+  has_many :orders, dependent: :destroy
+  
   def api_version
     ShopifyApp.configuration.api_version
   end
