@@ -2,10 +2,7 @@ Rails.application.routes.draw do
   get "shopify_products/index"
   get "dashboard/index"
   root :to => 'home#index'
-  get '/products', :to => 'products#index'
-  # config/routes.rb
-  get 'ebay/auth', to: 'ebay#auth'
-  get 'ebay/callback', to: 'ebay#callback'
+
 
   mount ShopifyApp::Engine, at: '/'
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
@@ -22,8 +19,19 @@ Rails.application.routes.draw do
   # root "posts#index"
 
   get 'dashboard', to: 'dashboard#index', as: :dashboard
-  get 'shopify_products', to: 'shopify_products#index', as: :shopify_products
+  get 'shopify_products', to: 'shopify_products#index', as: :shopify_products   
   get 'settings', to: 'settings#index', as: :settings
   get 'orders', to: 'orders#index', as: :orders
-  post 'ebay/notifications', to: 'ebay_notifications#create'
+
+  namespace :kuralis do
+    resources :products
+  end
+
+  namespace :ebay do
+    get 'auth', to: 'auth#auth'
+    get 'callback', to: 'auth#callback'
+    post 'notifications', to: 'notifications#create'
+    get 'import_listings', to: 'auth#import_listings'
+    resources :listings, only: [:index]
+  end
 end

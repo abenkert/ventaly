@@ -1,0 +1,69 @@
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Kuralis Products</h1>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>SKU</th>
+              <th>Location</th>
+              <th>eBay Status</th>
+              <th>eBay Price</th>
+              <th>Last Synced</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if @products.any? %>
+              <% @products.each do |product| %>
+                <tr>
+                  <td><%= product.title %></td>
+                  <td><%= product.sku %></td>
+                  <td><%= product.location %></td>
+                  <td>
+                    <% if product.ebay_listing %>
+                      <span class="badge <%= product.ebay_listing.active? ? 'bg-success' : 'bg-secondary' %>">
+                        <%= product.ebay_listing.ebay_status&.titleize %>
+                      </span>
+                    <% else %>
+                      <span class="badge bg-warning">Not Listed</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if product.ebay_listing %>
+                      <%= number_to_currency(product.ebay_listing.sale_price) %>
+                    <% else %>
+                      N/A
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if product.ebay_listing&.last_sync_at %>
+                      <%= time_ago_in_words(product.ebay_listing.last_sync_at) %> ago
+                    <% else %>
+                      Never
+                    <% end %>
+                  </td>
+                  <td>
+                    <%= link_to "View", kuralis_product_path(product), class: "btn btn-sm btn-outline-primary" %>
+                    <% if product.ebay_listing %>
+                      <%= link_to "eBay", product.ebay_listing.url, target: "_blank", class: "btn btn-sm btn-outline-secondary" %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="7" class="text-center">No products found</td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div> 

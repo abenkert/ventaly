@@ -1,6 +1,5 @@
-class EbayController < AuthenticatedController
-    layout 'authenticated'
-    
+module Ebay
+  class AuthController < Ebay::BaseController
     def auth
       service = EbayOauthService.new
       redirect_to service.authorization_url, allow_other_host: true
@@ -53,7 +52,6 @@ class EbayController < AuthenticatedController
       redirect_to settings_path, alert: "Failed to connect eBay account: #{e.message}"
     end
 
-    # Need to move this to be called from the ebay listings page
     def import_listings
       shop = Shop.find_by(shopify_domain: current_shopify_domain)
       ImportEbayListingsJob.perform_later(shop.id) if shop
@@ -62,4 +60,4 @@ class EbayController < AuthenticatedController
       redirect_to settings_path
     end
   end
-  
+end 
