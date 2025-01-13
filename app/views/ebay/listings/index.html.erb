@@ -3,10 +3,10 @@
     <h1>eBay Listings</h1>
     
     <div class="btn-group">
-      <%= button_to "Sync", ebay_import_listings_path, 
+      <%= button_to "Sync", ebay_listing_synchronizations_path,
           method: :post,
           class: "btn btn-outline-primary",
-          data: { turbo: false } %>
+          data: { turbo: true } %>
       
       <button type="button" 
               class="btn btn-outline-success" 

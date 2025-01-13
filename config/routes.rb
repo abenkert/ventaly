@@ -45,7 +45,8 @@ Rails.application.routes.draw do
     get 'auth', to: 'auth#auth'
     get 'callback', to: 'auth#callback'
     post 'notifications', to: 'notifications#create'
-    get 'import_listings', to: 'auth#import_listings'
-    resources :listings, only: [:index]
+    resources :listings, only: [:index] do
+      resources :synchronizations, only: [:create], shallow: true
+    end
   end
 end

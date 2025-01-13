@@ -51,13 +51,5 @@ module Ebay
     rescue StandardError => e
       redirect_to settings_path, alert: "Failed to connect eBay account: #{e.message}"
     end
-
-    def import_listings
-      shop = Shop.find_by(shopify_domain: current_shopify_domain)
-      ImportEbayListingsJob.perform_later(shop.id) if shop
-
-      flash[:notice] = 'Importing eBay listings. This may take a few minutes.'
-      redirect_to settings_path
-    end
   end
 end 
