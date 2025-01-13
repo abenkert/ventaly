@@ -90,6 +90,7 @@ GEM
     autoprefixer-rails (10.4.19.0)
       execjs (~> 2)
     base64 (0.2.0)
+    bcrypt (3.1.20)
     bcrypt_pbkdf (1.1.1)
     bcrypt_pbkdf (1.1.1-arm64-darwin)
     benchmark (0.4.0)
@@ -120,6 +121,12 @@ GEM
     debug (1.9.2)
       irb (~> 1.10)
       reline (>= 0.3.8)
+    devise (4.9.4)
+      bcrypt (~> 3.0)
+      orm_adapter (~> 0.1)
+      railties (>= 4.1.0)
+      responders
+      warden (~> 1.2.3)
     dotenv (3.1.4)
     dotenv-rails (3.1.4)
       dotenv (= 3.1.4)
@@ -232,6 +239,7 @@ GEM
       bigdecimal (>= 3.0)
       ostruct (>= 0.2)
     openssl (3.2.0)
+    orm_adapter (0.5.0)
     ostruct (0.6.1)
     parallel (1.26.3)
     parser (3.3.6.0)
@@ -293,9 +301,16 @@ GEM
       psych (>= 4.0.0)
     redirect_safely (1.0.0)
       activemodel
+    redis (5.3.0)
+      redis-client (>= 0.22.0)
+    redis-client (0.23.1)
+      connection_pool
     regexp_parser (2.9.2)
     reline (0.5.11)
       io-console (~> 0.5)
+    responders (3.1.1)
+      actionpack (>= 5.2)
+      railties (>= 5.2)
     rexml (3.3.9)
     rubocop (1.69.0)
       json (~> 2.3)
@@ -370,6 +385,11 @@ GEM
       redirect_safely (~> 1.0)
       shopify_api (>= 14.3.0, < 15.0)
       sprockets-rails (>= 2.0.0)
+    sidekiq (7.3.7)
+      connection_pool (>= 2.3.0)
+      logger
+      rack (>= 2.2.4)
+      redis-client (>= 0.22.2)
     solid_cable (3.0.2)
       actioncable (>= 7.2)
       activejob (>= 7.2)
@@ -419,6 +439,8 @@ GEM
     unicode-emoji (4.0.4)
     uri (1.0.2)
     useragent (0.16.10)
+    warden (1.2.9)
+      rack (>= 2.0.9)
     wasabi (5.1.0)
       addressable
       faraday (>= 1.9, < 3)
@@ -447,6 +469,7 @@ DEPENDENCIES
   brakeman
   capybara
   debug
+  devise
   dotenv-rails
   httparty
   importmap-rails
@@ -456,11 +479,13 @@ DEPENDENCIES
   propshaft
   puma (>= 5.0)
   rails (~> 8.0.0)
+  redis
   rubocop-rails-omakase
   sassc-rails
   savon
   selenium-webdriver
   shopify_app
+  sidekiq
   solid_cable
   solid_cache
   solid_queue

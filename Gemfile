@@ -34,6 +34,7 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
+gem 'devise'
 
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
@@ -71,3 +72,5 @@ end
 
 gem 'bootstrap', '~> 5.3.0'
 gem 'sassc-rails'
+gem 'sidekiq'
+gem 'redis'

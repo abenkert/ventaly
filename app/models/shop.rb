@@ -6,6 +6,7 @@ class Shop < ApplicationRecord
   has_one :shopify_ebay_account, dependent: :destroy
   has_many :kuralis_products, dependent: :destroy
   has_many :orders, dependent: :destroy
+  # has_one :user, dependent: :destroy  # Commented out for now
   
   def api_version
     ShopifyApp.configuration.api_version
@@ -17,5 +18,13 @@ class Shop < ApplicationRecord
     else
       "https://#{ENV['DEV_APP_HOST']}/ebay/notifications"
     end
+  end
+
+  def shopify_session
+    ShopifyAPI::Session.new(
+      shop_domain: shopify_domain,
+      access_token: shopify_token,
+      api_version: api_version
+    )
   end
 end
