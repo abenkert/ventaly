@@ -4,12 +4,21 @@ Rails.application.routes.draw do
   # Commenting out devise routes for now
   # devise_for :users
   
-  # Update Sidekiq authentication to use shop authentication
-  authenticate :shop, lambda { |shop| 
-    shop.shopify_domain == ENV['ADMIN_SHOP_DOMAIN']
-  } do
-    mount Sidekiq::Web => '/sidekiq'
+  # Protect Sidekiq web UI with basic auth
+  if Rails.env.production?
+    Sidekiq::Web.use Rack::Auth::Basic do |username, password|
+      ActiveSupport::SecurityUtils.secure_compare(
+        ::Digest::SHA256.hexdigest(username),
+        ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_USERNAME"])
+      ) &
+      ActiveSupport::SecurityUtils.secure_compare(
+        ::Digest::SHA256.hexdigest(password),
+        ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_PASSWORD"])
+      )
+    end
   end
+
+  mount Sidekiq::Web => '/sidekiq'
   
   get "shopify_products/index"
   get "dashboard/index"
