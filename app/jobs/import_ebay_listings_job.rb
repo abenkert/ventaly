@@ -27,48 +27,57 @@ class ImportEbayListingsJob < ApplicationJob
   private
 
   def process_items(items, ebay_account)
+    # Define namespace for xpath queries
+    namespaces = { 'ns' => 'urn:ebay:apis:eBLBaseComponents' }
+    
     items.each do |item|
       begin
-        listing = ebay_account.ebay_listings.find_or_initialize_by(
-          ebay_item_id: item.at_xpath('.//ItemID').text
-        )
+        ebay_item_id = item.at_xpath('.//ns:ItemID', namespaces).text
+        listing = ebay_account.ebay_listings.find_or_initialize_by(ebay_item_id: ebay_item_id)
 
+        # Update attributes regardless of whether it's a new or existing record
         listing.assign_attributes({
-          title: item.at_xpath('.//Title')&.text,
-          description: item.at_xpath('.//Description')&.text,
-          sale_price: item.at_xpath('.//SellingStatus/CurrentPrice')&.text&.to_d,
-          original_price: item.at_xpath('.//StartPrice')&.text&.to_d,
-          quantity: item.at_xpath('.//Quantity')&.text&.to_i,
-          shipping_profile_id: item.at_xpath('.//SellerProfiles/SellerShippingProfile/ShippingProfileID')&.text,
-          location: item.at_xpath('.//Location')&.text,
-          image_urls: extract_image_urls(item),
-          listing_format: item.at_xpath('.//ListingType')&.text,
-          condition_id: item.at_xpath('.//ConditionID')&.text,
-          condition_description: item.at_xpath('.//ConditionDisplayName')&.text,
-          category_id: item.at_xpath('.//PrimaryCategory/CategoryID')&.text,
-          listing_duration: item.at_xpath('.//ListingDuration')&.text,
-          end_time: Time.parse(item.at_xpath('.//ListingDetails/EndTime')&.text),
-          best_offer_enabled: item.at_xpath('.//BestOfferDetails/BestOfferEnabled')&.text == 'true',
-          ebay_status: item.at_xpath('.//SellingStatus/ListingStatus')&.text&.downcase,
+          title: item.at_xpath('.//ns:Title', namespaces)&.text,
+          sale_price: item.at_xpath('.//ns:SellingStatus/ns:CurrentPrice', namespaces)&.text&.to_d,
+          original_price: item.at_xpath('.//ns:StartPrice', namespaces)&.text&.to_d,
+          quantity: item.at_xpath('.//ns:Quantity', namespaces)&.text&.to_i,
+          shipping_profile_id: item.at_xpath('.//ns:SellerProfiles/ns:SellerShippingProfile/ns:ShippingProfileID', namespaces)&.text,
+          location: item.at_xpath('.//ns:Location', namespaces)&.text,
+          image_urls: extract_image_urls(item, namespaces),
+          listing_format: item.at_xpath('.//ns:ListingType', namespaces)&.text,
+          condition_id: item.at_xpath('.//ns:ConditionID', namespaces)&.text,
+          condition_description: item.at_xpath('.//ns:ConditionDisplayName', namespaces)&.text,
+          category_id: item.at_xpath('.//ns:PrimaryCategory/ns:CategoryID', namespaces)&.text,
+          listing_duration: item.at_xpath('.//ns:ListingDuration', namespaces)&.text,
+          end_time: Time.parse(item.at_xpath('.//ns:ListingDetails/ns:EndTime', namespaces)&.text.to_s),
+          best_offer_enabled: item.at_xpath('.//ns:BestOfferDetails/ns:BestOfferEnabled', namespaces)&.text == 'true',
+          ebay_status: item.at_xpath('.//ns:SellingStatus/ns:ListingStatus', namespaces)&.text&.downcase,
           last_sync_at: Time.current
         })
 
-        if listing.save
-          listing.cache_images
+        if listing.changed?
+          Rails.logger.info("Changes detected for #{ebay_item_id}: #{listing.changes.inspect}")
+          if listing.save
+            Rails.logger.info("#{listing.new_record? ? 'Created' : 'Updated'} listing #{ebay_item_id}")
+            listing.cache_images unless listing.images.attached?
+          else
+            Rails.logger.error("Failed to save listing #{ebay_item_id}: #{listing.errors.full_messages.join(', ')}")
+          end
         else
-          Rails.logger.error("Failed to save listing #{listing.ebay_item_id}: #{listing.errors.full_messages.join(', ')}")
+          Rails.logger.info("No changes detected for listing #{ebay_item_id}")
         end
       rescue => e
-        Rails.logger.error("Error processing item #{item.at_xpath('.//ItemID')&.text}: #{e.message}")
+        Rails.logger.error("Error processing item: #{e.message}")
+        Rails.logger.error(e.backtrace.join("\n"))
       end
     end
   end
 
-  def extract_image_urls(item)
+  def extract_image_urls(item, namespaces)
     urls = []
-    picture_details = item.at_xpath('.//PictureDetails')
+    picture_details = item.at_xpath('.//ns:PictureDetails', namespaces)
     if picture_details
-      urls << picture_details.at_xpath('.//PictureURL')&.text
+      urls << picture_details.at_xpath('.//ns:PictureURL', namespaces)&.text
     end
     urls.compact
   end
