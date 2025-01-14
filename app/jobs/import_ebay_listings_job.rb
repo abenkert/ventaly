@@ -7,64 +7,117 @@ class ImportEbayListingsJob < ApplicationJob
     return unless ebay_account
 
     token_service = EbayTokenService.new(shop)
-    total_imported = 0
     page = 1
 
-    response = fetch_seller_listings(token_service.fetch_or_refresh_access_token, page, last_sync_time)
-    
-    # Create namespace for xpath queries
-    namespaces = { 'ns' => 'urn:ebay:apis:eBLBaseComponents' }
-    
-    if response&.at_xpath('//ns:Ack', namespaces)&.text == 'Success'
-      total_pages = 2  # Hardcoded for testing
+    begin
+      response = fetch_seller_listings(token_service.fetch_or_refresh_access_token, page, last_sync_time)
+      namespaces = { 'ns' => 'urn:ebay:apis:eBLBaseComponents' }
       
-      while page <= total_pages
+      if response&.at_xpath('//ns:Ack', namespaces)&.text == 'Success'
         items = response.xpath('//ns:Item', namespaces)
-        process_items(items, shop) if items.any?
+        process_items(items, ebay_account)
         
-        break if page >= total_pages  # Break before incrementing if we're on the last page
-        
-        page += 1
-        response = fetch_seller_listings(token_service.fetch_or_refresh_access_token, page, last_sync_time)
-        break unless response&.at_xpath('//ns:Ack', namespaces)&.text == 'Success'
+        ebay_account.update(last_listing_import_at: Time.current)
       end
-      
-      ebay_account.update(last_listing_import_at: Time.current)
-      Rails.logger.info("Successfully imported/updated eBay listings. Total pages processed: #{page}")
-    else
-      error_message = response&.at_xpath('//ns:Errors/ns:LongMessage', namespaces)&.text
-      Rails.logger.error("Failed to fetch eBay listings: #{error_message || 'Unknown error'}")
+    rescue => e
+      Rails.logger.error("Error processing eBay listings: #{e.message}")
     end
-  rescue StandardError => e
-    Rails.logger.error("Error processing eBay listings: #{e.message}")
   end
 
   private
 
-  def process_items(items, shop)
-    namespaces = { 'ns' => 'urn:ebay:apis:eBLBaseComponents' }
-    
+  def process_items(items, ebay_account)
     items.each do |item|
-      ebay_item_id = item.at_xpath('.//ns:ItemID', namespaces)&.text
-      
-      # Extract all PictureURL nodes and map them to an array
-      picture_urls = item.xpath('.//ns:PictureDetails/ns:PictureURL', namespaces).map(&:text)
-      
-      listing = shop.shopify_ebay_account.ebay_listings.find_or_initialize_by(ebay_item_id: ebay_item_id)
-      listing.assign_attributes(
-        title: item.at_xpath('.//ns:Title', namespaces)&.text,
-        description: item.at_xpath('.//ns:Description', namespaces)&.text,
-        sale_price: item.at_xpath('.//ns:BuyItNowPrice', namespaces)&.text&.to_d,
-        original_price: item.at_xpath('.//ns:OriginalPrice', namespaces)&.text&.to_d,
-        quantity: item.at_xpath('.//ns:Quantity', namespaces)&.text&.to_i,
-        image_urls: picture_urls  # Store the array of URLs
-      )
-      
-      listing.save if listing.changed?
+      begin
+        listing = ebay_account.ebay_listings.find_or_initialize_by(
+          ebay_item_id: item.at_xpath('.//ItemID').text
+        )
+
+        listing.assign_attributes({
+          title: item.at_xpath('.//Title')&.text,
+          description: item.at_xpath('.//Description')&.text,
+          sale_price: item.at_xpath('.//SellingStatus/CurrentPrice')&.text&.to_d,
+          original_price: item.at_xpath('.//StartPrice')&.text&.to_d,
+          quantity: item.at_xpath('.//Quantity')&.text&.to_i,
+          shipping_profile_id: item.at_xpath('.//SellerProfiles/SellerShippingProfile/ShippingProfileID')&.text,
+          location: item.at_xpath('.//Location')&.text,
+          image_urls: extract_image_urls(item),
+          listing_format: item.at_xpath('.//ListingType')&.text,
+          condition_id: item.at_xpath('.//ConditionID')&.text,
+          condition_description: item.at_xpath('.//ConditionDisplayName')&.text,
+          category_id: item.at_xpath('.//PrimaryCategory/CategoryID')&.text,
+          listing_duration: item.at_xpath('.//ListingDuration')&.text,
+          end_time: Time.parse(item.at_xpath('.//ListingDetails/EndTime')&.text),
+          best_offer_enabled: item.at_xpath('.//BestOfferDetails/BestOfferEnabled')&.text == 'true',
+          ebay_status: item.at_xpath('.//SellingStatus/ListingStatus')&.text&.downcase,
+          last_sync_at: Time.current
+        })
+
+        if listing.save
+          listing.cache_images
+        else
+          Rails.logger.error("Failed to save listing #{listing.ebay_item_id}: #{listing.errors.full_messages.join(', ')}")
+        end
+      rescue => e
+        Rails.logger.error("Error processing item #{item.at_xpath('.//ItemID')&.text}: #{e.message}")
+      end
     end
   end
 
-  # def fetch_ebay_listings(access_token, page_number, modified_after = nil)
+  def extract_image_urls(item)
+    urls = []
+    picture_details = item.at_xpath('.//PictureDetails')
+    if picture_details
+      urls << picture_details.at_xpath('.//PictureURL')&.text
+    end
+    urls.compact
+  end
+
+  def fetch_seller_listings(access_token, page_number, start_time_from = nil, start_time_to = nil)
+    uri = URI('https://api.ebay.com/ws/api.dll')
+    
+    # If no time range is provided, default to last 120 days (eBay's maximum)
+    start_time_from ||= 120.days.ago
+    start_time_to ||= Time.current
+    
+    xml_request = <<~XML
+      <?xml version="1.0" encoding="utf-8"?>
+      <GetSellerListRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+        <DetailLevel>ReturnAll</DetailLevel>
+        <StartTimeFrom>#{start_time_from.iso8601}</StartTimeFrom>
+        <StartTimeTo>#{start_time_to.iso8601}</StartTimeTo>
+        <IncludeDescription>true</IncludeDescription>
+        <GranularityLevel>Fine</GranularityLevel>
+        <Pagination>
+          <EntriesPerPage>2</EntriesPerPage>
+          <PageNumber>#{page_number}</PageNumber>
+        </Pagination>
+      </GetSellerListRequest>
+    XML
+
+    headers = {
+      'X-EBAY-API-COMPATIBILITY-LEVEL' => '967',
+      'X-EBAY-API-IAF-TOKEN' => access_token,
+      'X-EBAY-API-DEV-NAME' => ENV['EBAY_DEV_ID'],
+      'X-EBAY-API-APP-NAME' => ENV['EBAY_CLIENT_ID'],
+      'X-EBAY-API-CERT-NAME' => ENV['EBAY_CLIENT_SECRET'],
+      'X-EBAY-API-CALL-NAME' => 'GetSellerList',
+      'X-EBAY-API-SITEID' => '0',
+      'Content-Type' => 'text/xml'
+    }
+
+    begin
+      response = Net::HTTP.post(uri, xml_request, headers)
+      Rails.logger.info("Raw response: #{response.body}")
+      
+      Nokogiri::XML(response.body)
+    rescue StandardError => e
+      Rails.logger.error("Error fetching seller listings: #{e.message}")
+      nil
+    end
+  end
+
+    # def fetch_ebay_listings(access_token, page_number, modified_after = nil)
   #   uri = URI('https://api.ebay.com/ws/api.dll')
 
   #   # This line belongs after detail level in the xml request
@@ -108,48 +161,4 @@ class ImportEbayListingsJob < ApplicationJob
   #     nil
   #   end
   # end
-
-  def fetch_seller_listings(access_token, page_number, start_time_from = nil, start_time_to = nil)
-    uri = URI('https://api.ebay.com/ws/api.dll')
-    
-    # If no time range is provided, default to last 120 days (eBay's maximum)
-    start_time_from ||= 120.days.ago
-    start_time_to ||= Time.current
-    
-    xml_request = <<~XML
-      <?xml version="1.0" encoding="utf-8"?>
-      <GetSellerListRequest xmlns="urn:ebay:apis:eBLBaseComponents">
-        <DetailLevel>ReturnAll</DetailLevel>
-        <StartTimeFrom>#{start_time_from.iso8601}</StartTimeFrom>
-        <StartTimeTo>#{start_time_to.iso8601}</StartTimeTo>
-        <IncludeDescription>true</IncludeDescription>
-        <GranularityLevel>Fine</GranularityLevel>
-        <Pagination>
-          <EntriesPerPage>1</EntriesPerPage>
-          <PageNumber>#{page_number}</PageNumber>
-        </Pagination>
-      </GetSellerListRequest>
-    XML
-
-    headers = {
-      'X-EBAY-API-COMPATIBILITY-LEVEL' => '967',
-      'X-EBAY-API-IAF-TOKEN' => access_token,
-      'X-EBAY-API-DEV-NAME' => ENV['EBAY_DEV_ID'],
-      'X-EBAY-API-APP-NAME' => ENV['EBAY_CLIENT_ID'],
-      'X-EBAY-API-CERT-NAME' => ENV['EBAY_CLIENT_SECRET'],
-      'X-EBAY-API-CALL-NAME' => 'GetSellerList',
-      'X-EBAY-API-SITEID' => '0',
-      'Content-Type' => 'text/xml'
-    }
-
-    begin
-      response = Net::HTTP.post(uri, xml_request, headers)
-      Rails.logger.info("Raw response: #{response.body}")
-      
-      Nokogiri::XML(response.body)
-    rescue StandardError => e
-      Rails.logger.error("Error fetching seller listings: #{e.message}")
-      nil
-    end
-  end
 end

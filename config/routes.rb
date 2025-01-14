@@ -46,7 +46,9 @@ Rails.application.routes.draw do
     get 'callback', to: 'auth#callback'
     post 'notifications', to: 'notifications#create'
     resources :listings, only: [:index] do
-      resources :synchronizations, only: [:create], shallow: true
+      collection do
+        resources :synchronizations, only: [:create]
+      end
     end
   end
 end

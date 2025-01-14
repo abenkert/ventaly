@@ -74,3 +74,10 @@ gem 'bootstrap', '~> 5.3.0'
 gem 'sassc-rails'
 gem 'sidekiq'
 gem 'redis'
+
+# For AWS S3 storage
+gem 'aws-sdk-s3'
+# For image processing
+gem 'image_processing'
+# For downloading remote images
+gem 'down'
