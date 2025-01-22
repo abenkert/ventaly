@@ -98,7 +98,7 @@ class ImportEbayListingsJob < ApplicationJob
         <IncludeDescription>true</IncludeDescription>
         <GranularityLevel>Fine</GranularityLevel>
         <Pagination>
-          <EntriesPerPage>2</EntriesPerPage>
+          <EntriesPerPage>30</EntriesPerPage>
           <PageNumber>#{page_number}</PageNumber>
         </Pagination>
       </GetSellerListRequest>

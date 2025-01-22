@@ -1,25 +1,56 @@
-<div class="container">
+<div class="container" data-controller="listing-selection">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>eBay Listings</h1>
     
-    <div class="btn-group">
-      <%= button_to "Sync", ebay_synchronizations_path,
-          method: :post,
-          class: "btn btn-outline-primary",
-          data: { turbo: true } %>
-      
-      <button type="button" 
-              class="btn btn-outline-success" 
-              id="migrateSelected" 
-              disabled>
-        Migrate Selected
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" 
+              type="button" 
+              id="actionDropdown" 
+              data-bs-toggle="dropdown" 
+              aria-expanded="false">
+        Actions
       </button>
       
-      <button type="button" 
-              class="btn btn-outline-info" 
-              id="migrateAll">
-        Migrate All
-      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionDropdown">
+        <li>
+          <%= button_to ebay_synchronizations_path,
+              method: :post,
+              class: "dropdown-item d-flex align-items-center",
+              data: { 
+                turbo: true,
+                controller: "sync",
+                action: "sync#startSync"
+              } do %>
+            <div class="d-flex align-items-center">
+              <span class="sync-text">Sync Listings</span>
+              <div class="spinner-border spinner-border-sm ms-2 d-none" 
+                   data-sync-target="spinner" 
+                   role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          <% end %>
+        </li>
+        
+        <li>
+          <button type="button" 
+                  class="dropdown-item" 
+                  data-listing-selection-target="migrateSelected"
+                  data-action="click->listing-selection#migrate"
+                  disabled>
+            Migrate Selected (<span data-listing-selection-target="selectedCount">0</span>)
+          </button>
+        </li>
+        
+        <li>
+          <button type="button" 
+                  class="dropdown-item" 
+                  id="migrateAll"
+                  data-action="click->listing-selection#migrateAll">
+            Migrate All
+          </button>
+        </li>
+      </ul>
     </div>
   </div>
 
@@ -30,9 +61,12 @@
           <thead>
             <tr>
               <th>
-                <input type="checkbox" class="form-check-input" id="selectAll">
+                <input type="checkbox" 
+                       class="form-check-input" 
+                       data-listing-selection-target="selectAll"
+                       data-action="input->listing-selection#toggleAll">
               </th>
-              <th></th>
+              <th>Image</th>
               <th>Title</th>
               <th>Price</th>
               <th>Quantity</th>
@@ -48,8 +82,10 @@
                 <tr>
                   <td>
                     <input type="checkbox" 
-                           class="form-check-input listing-checkbox" 
+                           class="form-check-input" 
                            value="<%= listing.id %>"
+                           data-listing-selection-target="checkbox"
+                           data-action="input->listing-selection#toggleOne"
                            <%= 'disabled' if listing.kuralis_product.present? %>>
                   </td>
                   <td>
@@ -102,46 +138,23 @@
               <% end %>
             <% else %>
               <tr>
-                <td colspan="8" class="text-center">No listings found</td>
+                <td colspan="9" class="text-center">No listings found</td>
               </tr>
             <% end %>
           </tbody>
         </table>
       </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted">
+          Showing <%= @listings.offset_value + 1 %> to <%= @listings.offset_value + @listings.length %> of <%= @listings.total_count %> listings
+        </div>
+        <div>
+          <%= paginate @listings, window: 2 %>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
-<%= javascript_tag do %>
-  document.addEventListener('turbo:load', function() {
-    const selectAll = document.getElementById('selectAll');
-    const listingCheckboxes = document.querySelectorAll('.listing-checkbox:not([disabled])');
-    const migrateSelectedBtn = document.getElementById('migrateSelected');
-
-    // Handle "Select All" checkbox
-    selectAll.addEventListener('change', function() {
-      listingCheckboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
-      });
-      updateMigrateSelectedButton();
-    });
-
-    // Handle individual checkboxes
-    listingCheckboxes.forEach(checkbox => {
-      checkbox.addEventListener('change', function() {
-        updateMigrateSelectedButton();
-        
-        // Update "Select All" checkbox
-        selectAll.checked = Array.from(listingCheckboxes)
-          .every(cb => cb.checked);
-      });
-    });
-
-    // Update "Migrate Selected" button state
-    function updateMigrateSelectedButton() {
-      const checkedCount = document.querySelectorAll('.listing-checkbox:checked').length;
-      migrateSelectedBtn.disabled = checkedCount === 0;
-      migrateSelectedBtn.textContent = `Migrate Selected (${checkedCount})`;
-    }
-  });
-<% end %> 
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+</div> 

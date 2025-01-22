@@ -48,6 +48,9 @@ Rails.application.routes.draw do
     resources :listings, only: [:index] do
       collection do
         resources :synchronizations, only: [:create]
+        resources :migrations, only: [:create] do
+          get :unmigrated_count, on: :collection
+        end
       end
     end
   end

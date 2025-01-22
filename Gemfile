@@ -81,3 +81,6 @@ gem 'aws-sdk-s3'
 gem 'image_processing'
 # For downloading remote images
 gem 'down'
+
+# Pagination
+gem 'kaminari'

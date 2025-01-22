@@ -7,6 +7,7 @@ class Shop < ApplicationRecord
   has_many :kuralis_products, dependent: :destroy
   has_many :orders, dependent: :destroy
   # has_one :user, dependent: :destroy  # Commented out for now
+  has_many :shopify_products, dependent: :destroy
   
   def api_version
     ShopifyApp.configuration.api_version
@@ -21,10 +22,9 @@ class Shop < ApplicationRecord
   end
 
   def shopify_session
-    ShopifyAPI::Session.new(
-      shop_domain: shopify_domain,
-      access_token: shopify_token,
-      api_version: api_version
+    ShopifyAPI::Auth::Session.new(
+      shop: shopify_domain,
+      access_token: shopify_token
     )
   end
 end

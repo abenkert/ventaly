@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_13_132150) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_22_145126) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -79,7 +79,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_13_132150) do
     t.string "condition"
     t.string "location"
     t.jsonb "images", default: []
-    t.jsonb "attributes", default: {}
+    t.jsonb "product_attributes", default: {}
     t.bigint "shop_id", null: false
     t.bigint "shopify_product_id"
     t.bigint "ebay_listing_id"
@@ -176,6 +176,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_13_132150) do
     t.datetime "last_synced_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "shop_id", null: false
+    t.string "image_urls", default: [], array: true
+    t.datetime "images_last_synced_at"
+    t.index ["shop_id"], name: "index_shopify_products_on_shop_id"
     t.index ["shopify_product_id"], name: "index_shopify_products_on_shopify_product_id", unique: true
     t.index ["shopify_variant_id"], name: "index_shopify_products_on_shopify_variant_id"
     t.index ["status"], name: "index_shopify_products_on_status"
@@ -216,5 +220,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_13_132150) do
   add_foreign_key "order_items", "orders"
   add_foreign_key "orders", "shops"
   add_foreign_key "shopify_ebay_accounts", "shops"
+  add_foreign_key "shopify_products", "shops"
   add_foreign_key "users", "shops"
 end
