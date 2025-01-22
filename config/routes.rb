@@ -38,7 +38,7 @@ Rails.application.routes.draw do
   get 'orders', to: 'orders#index', as: :orders
 
   namespace :kuralis do
-    resources :products
+    resources :products, only: [:index]
   end
 
   namespace :ebay do

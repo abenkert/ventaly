@@ -6,6 +6,11 @@ export default class extends Controller {
   connect() {
     console.log("Listing Selection Controller Connected")
     this.updateSelectedCount()
+    
+    // Initialize all popovers
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(popoverTriggerEl => {
+      new bootstrap.Popover(popoverTriggerEl)
+    })
   }
 
   toggleAll(event) {

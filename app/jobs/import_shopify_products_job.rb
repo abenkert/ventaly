@@ -41,6 +41,16 @@ class ImportShopifyProductsJob < ApplicationJob
 
   private
 
+  def extract_id_from_gid(gid)
+    return nil if gid.blank?
+    
+    # Extract the numeric ID from formats like "gid://shopify/Product/12345"
+    gid.split('/').last
+  rescue
+    Rails.logger.error "Failed to extract ID from GID: #{gid}"
+    nil
+  end
+
   def process_products(products, shop)
     products.each do |edge|
       begin
