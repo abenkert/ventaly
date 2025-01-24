@@ -81,4 +81,10 @@ Rails.application.configure do
 
   # Add your ngrok domain to allowed hosts
   config.hosts << "heroic-wahoo-new.ngrok-free.app"
+
+  # Set your application's domain name
+  # Rails.application.routes.default_url_options[:host] = 'kuralis.com'
+  # config.action_mailer.default_url_options = { host: 'kuralis.com' }
+  Rails.application.routes.default_url_options[:host] = 'heroic-wahoo-new.ngrok-free.app'
+  config.action_mailer.default_url_options = { host: 'heroic-wahoo-new.ngrok-free.app' }
 end
