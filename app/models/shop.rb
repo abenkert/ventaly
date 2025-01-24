@@ -27,4 +27,28 @@ class Shop < ApplicationRecord
       access_token: shopify_token
     )
   end
+
+  def recent_orders_count
+    orders.where('created_at > ?', 24.hours.ago).count
+  end
+
+  def unlinked_products_count
+    kuralis_products.unlinked.count
+  end
+
+  def ebay_listings_count
+    shopify_ebay_account&.ebay_listings&.count || 0
+  end
+
+  def recent_orders
+    orders.order(created_at: :desc).limit(5)
+  end
+
+  def product_distribution_data
+    {
+      shopify: shopify_products.count,
+      ebay: ebay_listings_count,
+      unlinked: unlinked_products_count
+    }
+  end
 end

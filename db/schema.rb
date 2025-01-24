@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_22_145126) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_22_152831) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -78,7 +78,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_22_145126) do
     t.string "brand"
     t.string "condition"
     t.string "location"
-    t.jsonb "images", default: []
+    t.jsonb "image_urls", default: []
     t.jsonb "product_attributes", default: {}
     t.bigint "shop_id", null: false
     t.bigint "shopify_product_id"
@@ -88,6 +88,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_22_145126) do
     t.string "status", default: "active"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "images_last_synced_at"
     t.index ["ebay_listing_id"], name: "index_kuralis_products_on_ebay_listing_id"
     t.index ["shop_id"], name: "index_kuralis_products_on_shop_id"
     t.index ["shopify_product_id"], name: "index_kuralis_products_on_shopify_product_id"

@@ -1,7 +1,7 @@
 class MigrateEbayListingsJob < ApplicationJob
-    ############################################################
-    # This job is used to migrate eBay listings to KuralisProducts
-    ############################################################
+  ############################################################
+  # This job is used to migrate eBay listings to KuralisProducts
+  ############################################################
   queue_as :default
 
   def perform(shop_id, listing_ids)
@@ -24,13 +24,17 @@ class MigrateEbayListingsJob < ApplicationJob
           brand: listing.item_specifics["Brand"],
           condition: listing.condition_description,
           location: listing.location,
-          images: listing.image_urls,
+          image_urls: listing.image_urls,
+          images_last_synced_at: Time.current,
           product_attributes: listing.item_specifics,
           source_platform: 'ebay',
           status: listing.active? ? 'active' : 'inactive',
           ebay_listing: listing,
           last_synced_at: Time.current
         )
+
+        # Cache images after creation
+        kuralis_product.cache_images
 
         Rails.logger.info "Successfully migrated eBay listing #{listing.ebay_item_id} to KuralisProduct #{kuralis_product.id}"
       rescue => e

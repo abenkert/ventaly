@@ -9,7 +9,6 @@ class FetchEbayOrdersJob < ApplicationJob
     start_time = 48.hours.ago.iso8601
     
     uri = URI('https://api.ebay.com/ws/api.dll')
-    
     xml_request = build_get_orders_request(token, start_time)
     
     headers = {
@@ -21,7 +20,11 @@ class FetchEbayOrdersJob < ApplicationJob
     }
 
     response = Net::HTTP.post(uri, xml_request, headers)
-    process_orders_response(response.body, shop) if response.is_a?(Net::HTTPSuccess)
+    
+    if response.is_a?(Net::HTTPSuccess)
+      active_order_ids = process_orders_response(response.body, shop)
+      mark_completed_orders(shop, active_order_ids, start_time)
+    end
   end
 
   private
@@ -52,19 +55,32 @@ class FetchEbayOrdersJob < ApplicationJob
     doc = Nokogiri::XML(response_xml)
     doc.remove_namespaces!
     
-    orders = doc.xpath('//Order')
+    active_order_ids = []
     
+    orders = doc.xpath('//Order')
     orders.each do |order_xml|
       # Skip orders that don't have transactions
       next unless order_xml.at_xpath('.//TransactionArray/Transaction')
       
-      # Skip if tracking number exists
-      has_tracking = order_xml.at_xpath('.//ShipmentTrackingDetails/ShipmentTrackingNumber')
-      next if has_tracking.present?
-      
       order = create_or_update_order(order_xml, shop)
-      process_order_items(order, order_xml)
+      active_order_ids << order.platform_order_id if order.present?
+      process_order_items(order, order_xml) if order.present?
     end
+
+    active_order_ids
+  end
+
+  def mark_completed_orders(shop, active_order_ids, start_time)
+    # Find orders that were created after start_time but aren't in the active list
+    shop.orders
+        .where(platform: 'ebay')
+        .where('created_at > ?', start_time)
+        .where.not(platform_order_id: active_order_ids)
+        .where.not(status: 'completed')
+        .update_all(
+          status: 'completed',
+          updated_at: Time.current
+        )
   end
 
   def create_or_update_order(order_xml, shop)

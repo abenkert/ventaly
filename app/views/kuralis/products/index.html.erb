@@ -9,11 +9,14 @@
         <table class="table table-hover">
           <thead>
             <tr>
+              <th>Image</th>
               <th>Title</th>
               <th>SKU</th>
+              <th>Base Price</th>
               <th>Location</th>
+              <th>Source</th>
+              <th>Shopify Status</th>
               <th>eBay Status</th>
-              <th>eBay Price</th>
               <th>Last Synced</th>
               <th>Actions</th>
             </tr>
@@ -22,13 +25,31 @@
             <% if @products.any? %>
               <% @products.each do |product| %>
                 <tr>
+                  <td>
+                    <% if product.images.attached? %>
+                      <%= image_tag product.images.first, 
+                                  class: "img-thumbnail", 
+                                  style: "max-width: 50px; max-height: 50px;" %>
+                    <% else %>
+                      <%= image_tag "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAADWUlEQVR4nO2ZW4hNURjHf+OScTcul3EpSrnMTEIukYcZeVFePHiZPCgpLy55kHLJA0V5kEwpD5JCKeWBJg/uEhGAyG1IDGaM22CY8Zf/qtVp77P3OWevtfdR51e/7j17f+v71l5rfd9aG/LIIw8P6AZUACeAh8B74DvwA/gEPAOuAweBhUCfbIgoBc4Cv4FEis934BwwPFMiKoHXaQhIdh4CQ0IWUgC0ehBgOzuAwqBFzAE+ByjCOu+AyUGJWAZ0hyTCOl+BFX6LKAY6QhZhnU5gpl8irgQQPdI5lwFvPQRPJ3AXOAqsAeqAKcAIYAAwCBgLzALWASeAe8AX+e4PwGov4i8GJOIJUAcsAIb6iEJDgSXAJSk3AVz0ImJ7hkW8AVYD/QIOpf7AWuC1lH/HrYjSTAn5DCwH8kMesvnAKqBN6rntRsRFn0V0yQQwKgPvRDEwEXgjdd1MVcQcH0V0AxuBfhl+K4YDz6W+y6mI2OWTiC/AMg+RKChMkDpbUxFR7YOITmBexHrCGGCH1N3mJGK/RxEJYFMEpzKTzVYDPVJ/vZ2IPR5F7ItgJEpkPTFZ7KiViAaPIhoi1lsKgTOyMB6yEjHfg4guYFrERBQBG2QdGmYlYp4HEV+BqRETYbJB6m+2EjHLg4i3wOSIiTDZKPXfshIxyYOIZ8C4iIkw2SL1P7ASUepBxH1gVMREVEv9nVYiijyIuAUMj5iISql/QOQWxFQXxF1gSMRElEv9CVv3ckHcAAZHTESJ1J+wdS8XxFVgUMRE9JX6E7bu5YI4D/SPmIgiqT9h614uiNNAvwhFpzKpP2HrXi6IY0BhxESYNaXD1r1cEIeB/IiJMJtYHbbu5YLYCeRFTITZDv9j614uiK1AXsREmK3+hK17uSA2RlCE2TFM2LqXC2JdBEWY49OErXu5IFZHUITZx0zYupcLYnkERZhjhoSte7kglkZQhDn7Tdi6lwtiUQRFmGPphK17uSDmRlCEOf9O2LqXC2J2BEWYi4KErXu5IGZEUITpEQlb93JBTIugCNNHErbulQ0iRtqIyIqIkUB7BESYXpKwda9si6gAPmRYhOklCVv3ypYIs66YS8OPGRBheknC1r2yIcJco5nrNHOxdgqoAXpn+sHzyON/xF/72MQMF8x22QAAAABJRU5ErkJggg==",
+                                  class: "img-thumbnail",
+                                  style: "max-width: 50px; max-height: 50px;" %>
+                    <% end %>
+                  </td>
                   <td><%= product.title %></td>
                   <td><%= product.sku %></td>
+                  <td><%= number_to_currency(product.base_price) %></td>
                   <td><%= product.location %></td>
                   <td>
-                    <% if product.ebay_listing %>
-                      <span class="badge <%= product.ebay_listing.active? ? 'bg-success' : 'bg-secondary' %>">
-                        <%= product.ebay_listing.ebay_status&.titleize %>
+                    <span class="badge bg-info">
+                      <%= product.source_platform&.titleize %>
+                    </span>
+                  </td>
+                  <td>
+                    <% if product.shopify_product %>
+                      <span class="badge <%= product.shopify_product.active? ? 'bg-success' : 'bg-secondary' %>">
+                        <%= product.shopify_product.status&.titleize %>
+                        (<%= number_to_currency(product.shopify_product.price) %>)
                       </span>
                     <% else %>
                       <span class="badge bg-warning">Not Listed</span>
@@ -36,17 +57,16 @@
                   </td>
                   <td>
                     <% if product.ebay_listing %>
-                      <%= number_to_currency(product.ebay_listing.sale_price) %>
+                      <span class="badge <%= product.ebay_listing.active? ? 'bg-success' : 'bg-secondary' %>">
+                        <%= product.ebay_listing.ebay_status&.titleize %>
+                        (<%= number_to_currency(product.ebay_listing.sale_price) %>)
+                      </span>
                     <% else %>
-                      N/A
+                      <span class="badge bg-warning">Not Listed</span>
                     <% end %>
                   </td>
                   <td>
-                    <% if product.ebay_listing&.last_sync_at %>
-                      <%= time_ago_in_words(product.ebay_listing.last_sync_at) %> ago
-                    <% else %>
-                      Never
-                    <% end %>
+                    <%= time_ago_in_words(product.last_synced_at) if product.last_synced_at %> ago
                   </td>
                   <td>
                     <%= link_to "View", "#", class: "btn btn-sm btn-outline-primary" %>
@@ -55,11 +75,20 @@
               <% end %>
             <% else %>
               <tr>
-                <td colspan="7" class="text-center">No products found</td>
+                <td colspan="10" class="text-center">No products found</td>
               </tr>
             <% end %>
           </tbody>
         </table>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted">
+          Showing <%= @products.offset_value + 1 %> to <%= @products.offset_value + @products.length %> of <%= @products.total_count %> products
+        </div>
+        <div>
+          <%= paginate @products %>
+        </div>
       </div>
     </div>
   </div>

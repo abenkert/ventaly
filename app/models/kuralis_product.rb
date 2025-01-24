@@ -2,6 +2,7 @@ class KuralisProduct < ApplicationRecord
   belongs_to :shop
   belongs_to :shopify_product, optional: true
   belongs_to :ebay_listing, optional: true
+  has_many_attached :images
 
   validates :title, presence: true
   validates :base_price, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
@@ -25,5 +26,20 @@ class KuralisProduct < ApplicationRecord
 
   def sync_needed?
     last_synced_at.nil? || last_synced_at < updated_at
+  end
+
+  # Add image caching method
+  def cache_images
+    return if image_urls.blank?
+
+    image_urls.each do |url|
+      begin
+        images.attach(io: URI.open(url), filename: File.basename(url))
+      rescue => e
+        Rails.logger.error "Failed to cache image from #{url}: #{e.message}"
+      end
+    end
+    
+    update(images_last_synced_at: Time.current)
   end
 end 

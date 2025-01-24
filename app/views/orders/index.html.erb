@@ -7,10 +7,10 @@
           class: "btn #{@tab == 'all' ? 'btn-primary' : 'btn-outline-secondary'}" %>
       <%= link_to "Pending", orders_path(tab: 'pending'), 
           class: "btn #{@tab == 'pending' ? 'btn-primary' : 'btn-outline-secondary'}" %>
-      <%= link_to "Paid", orders_path(tab: 'paid'), 
-          class: "btn #{@tab == 'paid' ? 'btn-primary' : 'btn-outline-secondary'}" %>
-      <%= link_to "Shipped", orders_path(tab: 'shipped'), 
-          class: "btn #{@tab == 'shipped' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+      <%= link_to "Shopify", orders_path(tab: 'shopify'), 
+          class: "btn #{@tab == 'shopify' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+      <%= link_to "eBay", orders_path(tab: 'ebay'), 
+          class: "btn #{@tab == 'ebay' ? 'btn-primary' : 'btn-outline-secondary'}" %>
       <%= link_to "Completed", orders_path(tab: 'completed'), 
           class: "btn #{@tab == 'completed' ? 'btn-primary' : 'btn-outline-secondary'}" %>
     </div>
@@ -37,7 +37,7 @@
             <% if @orders.any? %>
               <% @orders.each do |order| %>
                 <tr>
-                  <td><%= order.platform %></td>
+                  <td><%= order.platform.titleize %></td>
                   <td><%= order.platform_order_id %></td>
                   <td><%= order.order_placed_at.in_time_zone('Eastern Time (US & Canada)').strftime("%b %d, %Y %I:%M %p") %></td>
                   <td><%= order.customer_name %></td>
@@ -56,13 +56,23 @@
                     <% end %>
                   </td>
                   <td>
-                    <%= link_to "View", 'https://www.ebay.com/sh/ord/?filter=status:AWAITING_SHIPMENT', class: "btn btn-sm btn-outline-primary" %>
+                    <div class="btn-group">
+                      <% if order.platform == 'ebay' %>
+                        <%= link_to "eBay", "https://www.ebay.com/vod/FetchOrderDetails?orderid=#{order.platform_order_id}", 
+                            class: "btn btn-sm btn-outline-warning",
+                            target: "_blank" %>
+                      <% elsif order.platform == 'shopify' %>
+                        <%= link_to "Shopify", "https://#{@shop.shopify_domain}/admin/orders/#{order.platform_order_id}", 
+                            class: "btn btn-sm btn-outline-success",
+                            target: "_blank" %>
+                      <% end %>
+                    </div>
                   </td>
                 </tr>
               <% end %>
             <% else %>
               <tr>
-                <td colspan="8" class="text-center">No orders found</td>
+                <td colspan="9" class="text-center">No orders found</td>
               </tr>
             <% end %>
           </tbody>
