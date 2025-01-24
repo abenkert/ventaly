@@ -38,7 +38,11 @@ Rails.application.routes.draw do
   get 'orders', to: 'orders#index', as: :orders
 
   namespace :kuralis do
-    resources :products, only: [:index]
+    resources :products, only: [:index] do
+      collection do
+        post :bulk_action
+      end
+    end
   end
 
   namespace :ebay do
@@ -53,5 +57,9 @@ Rails.application.routes.draw do
         end
       end
     end
+  end
+
+  namespace :admin do
+    resources :jobs, only: [:index]
   end
 end

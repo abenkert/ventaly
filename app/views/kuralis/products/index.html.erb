@@ -1,35 +1,70 @@
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Kuralis Products</h1>
+    
+    <div class="btn-group">
+      <%= link_to "All", kuralis_products_path(filter: 'all'), 
+          class: "btn #{@filter == 'all' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+      <%= link_to "Unlisted", kuralis_products_path(filter: 'unlisted'), 
+          class: "btn #{@filter == 'unlisted' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+      <%= link_to "On Shopify", kuralis_products_path(filter: 'shopify'), 
+          class: "btn #{@filter == 'shopify' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+      <%= link_to "On eBay", kuralis_products_path(filter: 'ebay'), 
+          class: "btn #{@filter == 'ebay' ? 'btn-primary' : 'btn-outline-secondary'}" %>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Image</th>
-              <th>Title</th>
-              <th>SKU</th>
-              <th>Base Price</th>
-              <th>Location</th>
-              <th>Source</th>
-              <th>Shopify Status</th>
-              <th>eBay Status</th>
-              <th>Last Synced</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if @products.any? %>
+  <%= form_tag bulk_action_kuralis_products_path, method: :post, id: 'products-form' do %>
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="form-check">
+            <%= check_box_tag 'select_all', '1', false, class: 'form-check-input', id: 'select-all' %>
+            <label class="form-check-label" for="select-all">Select All</label>
+          </div>
+          
+          <div class="btn-group">
+            <%= button_tag type: 'submit', name: 'action', value: 'list_shopify', 
+                class: 'btn btn-success', data: { confirm: 'List selected products on Shopify?' } do %>
+              <i class="bi bi-shop me-1"></i>List on Shopify
+            <% end %>
+            
+            <%= button_tag type: 'submit', name: 'action', value: 'list_ebay', 
+                class: 'btn btn-warning', data: { confirm: 'List selected products on eBay?' } do %>
+              <i class="bi bi-tags me-1"></i>List on eBay
+            <% end %>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Image</th>
+                <th>Title</th>
+                <th>SKU</th>
+                <th>Base Price</th>
+                <th>Location</th>
+                <th>Source</th>
+                <th>Shopify Status</th>
+                <th>eBay Status</th>
+                <th>Last Synced</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
               <% @products.each do |product| %>
                 <tr>
                   <td>
+                    <%= check_box_tag "product_ids[]", product.id, false, 
+                        class: 'form-check-input product-checkbox',
+                        disabled: (product.shopify_product.present? && product.ebay_listing.present?) %>
+                  </td>
+                  <td>
                     <% if product.images.attached? %>
-                      <%= image_tag product.images.first, 
-                                  class: "img-thumbnail", 
-                                  style: "max-width: 50px; max-height: 50px;" %>
+                      <%= image_tag product.images.first, class: "img-thumbnail", 
+                          style: "max-width: 50px; max-height: 50px;" %>
                     <% else %>
                       <%= image_tag "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAADWUlEQVR4nO2ZW4hNURjHf+OScTcul3EpSrnMTEIukYcZeVFePHiZPCgpLy55kHLJA0V5kEwpD5JCKeWBJg/uEhGAyG1IDGaM22CY8Zf/qtVp77P3OWevtfdR51e/7j17f+v71l5rfd9aG/LIIw8P6AZUACeAh8B74DvwA/gEPAOuAweBhUCfbIgoBc4Cv4FEis934BwwPFMiKoHXaQhIdh4CQ0IWUgC0ehBgOzuAwqBFzAE+ByjCOu+AyUGJWAZ0hyTCOl+BFX6LKAY6QhZhnU5gpl8irgQQPdI5lwFvPQRPJ3AXOAqsAeqAKcAIYAAwCBgLzALWASeAe8AX+e4PwGov4i8GJOIJUAcsAIb6iEJDgSXAJSk3AVz0ImJ7hkW8AVYD/QIOpf7AWuC1lH/HrYjSTAn5DCwH8kMesvnAKqBN6rntRsRFn0V0yQQwKgPvRDEwEXgjdd1MVcQcH0V0AxuBfhl+K4YDz6W+y6mI2OWTiC/AMg+RKChMkDpbUxFR7YOITmBexHrCGGCH1N3mJGK/RxEJYFMEpzKTzVYDPVJ/vZ2IPR5F7ItgJEpkPTFZ7KiViAaPIhoi1lsKgTOyMB6yEjHfg4guYFrERBQBG2QdGmYlYp4HEV+BqRETYbJB6m+2EjHLg4i3wOSIiTDZKPXfshIxyYOIZ8C4iIkw2SL1P7ASUepBxH1gVMREVEv9nVYiijyIuAUMj5iISql/QOQWxFQXxF1gSMRElEv9CVv3ckHcAAZHTESJ1J+wdS8XxFVgUMRE9JX6E7bu5YI4D/SPmIgiqT9h614uiNNAvwhFpzKpP2HrXi6IY0BhxESYNaXD1r1cEIeB/IiJMJtYHbbu5YLYCeRFTITZDv9j614uiK1AXsREmK3+hK17uSA2RlCE2TFM2LqXC2JdBEWY49OErXu5IFZHUITZx0zYupcLYnkERZhjhoSte7kglkZQhDn7Tdi6lwtiUQRFmGPphK17uSDmRlCEOf9O2LqXC2J2BEWYi4KErXu5IGZEUITpEQlb93JBTIugCNNHErbulQ0iRtqIyIqIkUB7BESYXpKwda9si6gAPmRYhOklCVv3ypYIs66YS8OPGRBheknC1r2yIcJco5nrNHOxdgqoAXpn+sHzyON/xF/72MQMF8x22QAAAABJRU5ErkJggg==",
                                   class: "img-thumbnail",
@@ -52,7 +87,12 @@
                         (<%= number_to_currency(product.shopify_product.price) %>)
                       </span>
                     <% else %>
-                      <span class="badge bg-warning">Not Listed</span>
+                      <div class="btn-group">
+                        <%= button_tag type: 'submit', name: 'action', value: "list_shopify_#{product.id}", 
+                            class: 'btn btn-sm btn-outline-success' do %>
+                          <i class="bi bi-plus-circle me-1"></i>List
+                        <% end %>
+                      </div>
                     <% end %>
                   </td>
                   <td>
@@ -62,7 +102,12 @@
                         (<%= number_to_currency(product.ebay_listing.sale_price) %>)
                       </span>
                     <% else %>
-                      <span class="badge bg-warning">Not Listed</span>
+                      <div class="btn-group">
+                        <%= button_tag type: 'submit', name: 'action', value: "list_ebay_#{product.id}", 
+                            class: 'btn btn-sm btn-outline-warning' do %>
+                          <i class="bi bi-plus-circle me-1"></i>List
+                        <% end %>
+                      </div>
                     <% end %>
                   </td>
                   <td>
@@ -73,23 +118,26 @@
                   </td>
                 </tr>
               <% end %>
-            <% else %>
-              <tr>
-                <td colspan="10" class="text-center">No products found</td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="d-flex justify-content-between align-items-center mt-3">
-        <div class="text-muted">
-          Showing <%= @products.offset_value + 1 %> to <%= @products.offset_value + @products.length %> of <%= @products.total_count %> products
+            </tbody>
+          </table>
         </div>
-        <div>
-          <%= paginate @products %>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="text-muted">
+            Showing <%= @products.offset_value + 1 %> to <%= @products.offset_value + @products.length %> of <%= @products.total_count %> products
+          </div>
+          <div>
+            <%= paginate @products %>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div> 
+  <% end %>
+</div>
+
+<%= javascript_tag do %>
+  document.getElementById('select-all').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.product-checkbox:not(:disabled)');
+    checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+  });
+<% end %> 
