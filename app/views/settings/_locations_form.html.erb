@@ -1,0 +1,55 @@
+<%= turbo_frame_tag "locations_form" do %>
+  <%= form_with(model: @shop, 
+                url: update_default_location_settings_path, 
+                method: :patch, 
+                data: { controller: "form-submit" }) do |f| %>
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <%= f.label :default_location_id, "Default Location" %>
+          <%= f.select :default_location_id,
+              @shop.locations.map { |id, location| [location["name"], id] },
+              { include_blank: "Select a default location" },
+              class: "form-select",
+              data: { action: "change->form-submit#submit" } %>
+          <small class="form-text text-muted">
+            This location will be used as the default for inventory management
+          </small>
+        </div>
+      </div>
+    </div>
+  <% end %>
+  
+  <% if @shop.locations.present? %>
+    <div class="table-responsive mt-3">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Location Name</th>
+            <th>Default</th>
+            <th>ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @shop.locations.each do |id, location| %>
+            <tr>
+              <td><%= location["name"] %></td>
+              <td>
+                <% if id == @shop.default_location_id %>
+                  <span class="badge bg-success">Yes</span>
+                <% else %>
+                  <span class="badge bg-secondary">No</span>
+                <% end %>
+              </td>
+              <td><small class="text-muted"><%= id %></small></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="alert alert-info mt-3">
+      No locations found. Click 'Sync Locations' to fetch your Shopify locations.
+    </div>
+  <% end %>
+<% end %> 

@@ -62,4 +62,11 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :jobs, only: [:index]
   end
+
+  resources :settings, only: [:index] do
+    collection do
+      post :sync_locations
+      patch :update_default_location
+    end
+  end
 end

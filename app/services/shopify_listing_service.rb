@@ -8,7 +8,8 @@ class ShopifyListingService
   def create_listing
     return false if @product.shopify_product.present?
 
-    variables = {
+    # First create the base product
+    product_variables = {
       input: {
         title: @product.title,
         descriptionHtml: escape_html(@product.description),
@@ -19,30 +20,38 @@ class ShopifyListingService
       }
     }
 
-    response = @client.query(
+    product_response = @client.query(
       query: build_create_product_mutation,
-      variables: variables
+      variables: product_variables
     )
-
-    if response.body['data'] && response.body['data']['productCreate']['product']
-      shopify_product = response.body['data']['productCreate']['product']
+    pp product_response
+    if product_response.body['data'] && product_response.body['data']['productCreate']['product']
+      shopify_product = product_response.body['data']['productCreate']['product']
       
-      # Create the association
-      @product.create_shopify_product!(
-        shopify_product_id: shopify_product['id'].split('/').last,
-        title: shopify_product['title'],
-        status: shopify_product['status'],
-        shop: @shop
-      )
-
-      # Now create variant and set images
-      create_variant
-      upload_images if @product.images.attached?
+      # Then create the variant with a separate mutation
+      variant_response = create_variant_for_product(shopify_product['id'])
       
-      true
+      if variant_response && variant_response['variant']
+        variant = variant_response['variant']
+        
+        @product.create_shopify_product!(
+          platform_product_id: shopify_product['id'].split('/').last,
+          platform_variant_id: variant['id'].split('/').last,
+          title: shopify_product['title'],
+          status: shopify_product['status'],
+          shop: @shop
+        )
+
+        upload_images if @product.images.attached?
+        true
+      else
+        variant_errors = variant_response.body['data']&.dig('variantCreate', 'userErrors') || variant_response.body['errors']
+        Rails.logger.error "Failed to create Shopify variant: #{variant_errors.inspect}"
+        false
+      end
     else
-      errors = response.body['data']&.dig('productCreate', 'userErrors') || response.body['errors']
-      Rails.logger.error "Failed to create Shopify product: #{errors.inspect}"
+      product_errors = product_response.body['data']&.dig('productCreate', 'userErrors') || product_response.body['errors']
+      Rails.logger.error "Failed to create Shopify product: #{product_errors.inspect}"
       false
     end
   rescue => e
@@ -52,6 +61,43 @@ class ShopifyListingService
   end
 
   private
+
+  def create_variant_for_product(product_id)
+    mutation = <<~GQL
+      mutation {
+        productVariantsBulkCreate(input: {
+          productId: "#{product_id}",
+          variants: [{
+            price: "#{@product.base_price}",
+            sku: "#{@product.sku}",
+            inventoryQuantities: [{
+              availableQuantity: #{@product.quantity || 0},
+              locationId: "#{@shop.default_location_id}"
+            }]
+          }]
+        }) {
+          variant {
+            id
+            price
+            sku
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    GQL
+
+    response = @client.query(query: mutation)
+    
+    if response.body['data'] && response.body['data']['productVariantCreate']
+      response.body['data']['productVariantCreate']
+    else
+      Rails.logger.error "Variant creation failed: #{response.body['errors']&.inspect}"
+      nil
+    end
+  end
 
   def build_create_product_mutation
     <<~GQL
@@ -69,38 +115,6 @@ class ShopifyListingService
         }
       }
     GQL
-  end
-
-  def create_variant
-    mutation = <<~GQL
-      mutation variantCreate($input: ProductVariantInput!) {
-        productVariantCreate(input: $input) {
-          variant {
-            id
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    GQL
-
-    variables = {
-      input: {
-        productId: @product.shopify_product.platform_product_id,
-        price: @product.base_price.to_s,
-        sku: @product.sku,
-        inventoryQuantities: [{
-          availableQuantity: @product.base_quantity || 0
-        }]
-      }
-    }
-
-    @client.query(
-      query: mutation,
-      variables: variables
-    )
   end
 
   def upload_images
@@ -121,7 +135,7 @@ class ShopifyListingService
     @product.images.each do |image|
       variables = {
         input: {
-          productId: @product.shopify_product.platform_product_id,
+          productId: @product.shopify_product.shopify_product_id,
           altText: @product.title,
           src: generate_image_url(image)
         }

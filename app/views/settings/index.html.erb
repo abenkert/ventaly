@@ -6,3 +6,19 @@
   <p>Your eBay account is not linked.</p>
   <%= link_to 'Link eBay Account', ebay_auth_path, class: 'btn btn-primary' %>
 <% end %>
+
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Locations</h5>
+    <%= button_to sync_locations_settings_path, 
+          method: :post, 
+          class: "btn btn-outline-primary btn-sm",
+          data: { turbo: true } do %>
+      <i class="bi bi-arrow-repeat me-1"></i>Sync Locations
+    <% end %>
+  </div>
+  
+  <div class="card-body">
+    <%= render "locations_form", shop: @shop %>
+  </div>
+</div>
