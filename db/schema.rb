@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_24_230204) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_26_154205) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -234,8 +234,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_24_230204) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ebay_listings", "shopify_ebay_accounts"
   add_foreign_key "job_runs", "shops"
-  add_foreign_key "kuralis_products", "ebay_listings"
-  add_foreign_key "kuralis_products", "shopify_products"
+  add_foreign_key "kuralis_products", "ebay_listings", on_delete: :nullify
+  add_foreign_key "kuralis_products", "shopify_products", on_delete: :nullify
   add_foreign_key "kuralis_products", "shops"
   add_foreign_key "order_items", "kuralis_products"
   add_foreign_key "order_items", "orders"

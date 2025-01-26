@@ -19,6 +19,8 @@ class ImportShopifyProductsJob < ApplicationJob
           }
         )
 
+        pp response
+
         process_products(response.body["data"]["products"]["edges"], shop)
 
         page_info = response.body["data"]["products"]["pageInfo"]

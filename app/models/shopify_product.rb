@@ -1,6 +1,6 @@
 class ShopifyProduct < ApplicationRecord
   belongs_to :shop
-  has_one :kuralis_product
+  has_one :kuralis_product, dependent: :nullify
   has_many_attached :images
 
   validates :shop_id, presence: true

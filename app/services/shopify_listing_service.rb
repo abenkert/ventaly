@@ -6,54 +6,92 @@ class ShopifyListingService
   end
 
   def create_listing
+    # We currently do not support multiple variants
     return false if @product.shopify_product.present?
 
-    # First create the base product
     product_variables = {
-      input: {
-        title: @product.title,
-        descriptionHtml: escape_html(@product.description),
-        vendor: @shop.shopify_domain,
-        status: "ACTIVE",
-        productType: "",
-        handle: @product.title.parameterize
+        "synchronous": true,
+        "productSet": {
+          "title": @product.title,
+          "descriptionHtml": escape_html(@product.description),
+          "files": prepare_product_images,
+          "productOptions": [
+            {
+              "name": "Title",
+              "position": 1,
+              "values": [
+                {
+                  "name": "Default Title"
+                }
+              ]
+            }
+          ],
+          "variants": [
+            {
+              "optionValues": [
+                {
+                  "optionName": "Title",
+                  "name": "Default Title"
+                }
+              ],
+              "inventoryItem": {
+                "tracked": true
+              },
+              "inventoryQuantities": [
+                {
+                  "locationId": @shop.default_location_id,
+                  "name": "available",
+                  "quantity": @product.base_quantity
+                }
+              ],
+              "price": @product.base_price
+            }
+          ]
+        }
       }
-    }
 
     product_response = @client.query(
       query: build_create_product_mutation,
       variables: product_variables
     )
-    pp product_response
-    if product_response.body['data'] && product_response.body['data']['productCreate']['product']
-      shopify_product = product_response.body['data']['productCreate']['product']
-      
-      # Then create the variant with a separate mutation
-      variant_response = create_variant_for_product(shopify_product['id'])
-      
-      if variant_response && variant_response['variant']
-        variant = variant_response['variant']
-        
-        @product.create_shopify_product!(
-          platform_product_id: shopify_product['id'].split('/').last,
-          platform_variant_id: variant['id'].split('/').last,
-          title: shopify_product['title'],
-          status: shopify_product['status'],
-          shop: @shop
-        )
 
-        upload_images if @product.images.attached?
-        true
-      else
-        variant_errors = variant_response.body['data']&.dig('variantCreate', 'userErrors') || variant_response.body['errors']
-        Rails.logger.error "Failed to create Shopify variant: #{variant_errors.inspect}"
-        false
-      end
+    pp product_response
+
+    if product_response && product_response.body['data'] && product_response.body['data']['productSet']['product']  
+        product_data = product_response.body['data']['productSet']['product']
+        variant_data = product_data['variants']['nodes'].first
+
+        product_id = product_data['id'].split('/').last
+        variant_id = variant_data['inventoryItem']['id'].split('/').last
+        
+        shopify_product = @product.create_shopify_product!(
+            shop: @shop,
+            shopify_product_id: product_id,
+            shopify_variant_id: variant_id,
+            title: @product.title,
+            price: @product.base_price,
+            quantity: @product.base_quantity,
+            sku: @product.sku,
+            status: 'active',
+            published: true
+          )
+    
+          # Attach the same images from KuralisProduct
+          if @product.images.attached?
+            @product.images.each do |image|
+              shopify_product.images.attach(
+                io: image.blob.open,
+                filename: image.filename.to_s,
+                content_type: image.content_type,
+                identify: false  # Skip automatic content type identification
+              )
+            end
+          end
     else
-      product_errors = product_response.body['data']&.dig('productCreate', 'userErrors') || product_response.body['errors']
-      Rails.logger.error "Failed to create Shopify product: #{product_errors.inspect}"
-      false
+        Rails.logger.error "Error creating Shopify product: #{product_response.body['errors']}"
+        false
     end
+    true
   rescue => e
     Rails.logger.error "Error creating Shopify product: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -62,90 +100,44 @@ class ShopifyListingService
 
   private
 
-  def create_variant_for_product(product_id)
-    mutation = <<~GQL
-      mutation {
-        productVariantsBulkCreate(input: {
-          productId: "#{product_id}",
-          variants: [{
-            price: "#{@product.base_price}",
-            sku: "#{@product.sku}",
-            inventoryQuantities: [{
-              availableQuantity: #{@product.quantity || 0},
-              locationId: "#{@shop.default_location_id}"
-            }]
-          }]
-        }) {
-          variant {
-            id
-            price
-            sku
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    GQL
-
-    response = @client.query(query: mutation)
-    
-    if response.body['data'] && response.body['data']['productVariantCreate']
-      response.body['data']['productVariantCreate']
-    else
-      Rails.logger.error "Variant creation failed: #{response.body['errors']&.inspect}"
-      nil
-    end
-  end
-
   def build_create_product_mutation
+    # language=GraphQL
     <<~GQL
-      mutation productCreate($input: ProductInput!) {
-        productCreate(input: $input) {
+      mutation createProduct($productSet: ProductSetInput!, $synchronous: Boolean!) {
+        productSet(synchronous: $synchronous, input: $productSet) {
           product {
             id
-            title
-            status
+            variants(first: 1) {
+              nodes {
+                title
+                price
+                inventoryQuantity
+                inventoryItem {
+                  id
+                }
+              }
+            }
+            media(first: 1) {
+              edges {
+                node {
+                  preview {
+                    status    
+                    image {
+                        id
+                        url
+                    }
+                  }
+                }
+              }
+            }
           }
-          userErrors {
-            field
-            message
-          }
+        userErrors {
+              field
+              message
+            }
         }
       }
     GQL
-  end
-
-  def upload_images
-    mutation = <<~GQL
-      mutation productImageCreate($input: ProductImageInput!) {
-        productImageCreate(input: $input) {
-          image {
-            id
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    GQL
-
-    @product.images.each do |image|
-      variables = {
-        input: {
-          productId: @product.shopify_product.shopify_product_id,
-          altText: @product.title,
-          src: generate_image_url(image)
-        }
-      }
-
-      @client.query(
-        query: mutation,
-        variables: variables
-      )
-    end
   end
 
   def generate_image_url(image)
@@ -153,6 +145,16 @@ class ShopifyListingService
       Rails.application.routes.url_helpers.url_for(image)
     else
       image.blob.url(expires_in: 1.hour)
+    end
+  end
+
+  def prepare_product_images
+    @product.images.map do |image|
+      {
+        "contentType": "IMAGE",
+        "alt": @product.title,
+        "originalSource": generate_image_url(image)
+      }
     end
   end
 

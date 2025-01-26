@@ -1,6 +1,6 @@
 class EbayListing < ApplicationRecord
   belongs_to :shopify_ebay_account
-  has_one :kuralis_product
+  has_one :kuralis_product, dependent: :nullify
   has_many_attached :images
   
   validates :ebay_item_id, presence: true, 
