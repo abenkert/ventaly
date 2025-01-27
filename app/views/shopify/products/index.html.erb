@@ -11,7 +11,46 @@
         Actions
       </button>
       
-
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionDropdown">
+        <li>
+          <%= button_to  shopify_synchronizations_path,
+              method: :post,
+              class: "dropdown-item d-flex align-items-center",
+              data: { 
+                turbo: true,
+                controller: "sync",
+                action: "sync#startSync"
+              } do %>
+            <div class="d-flex align-items-center">
+              <span class="sync-text">Sync Products</span>
+              <div class="spinner-border spinner-border-sm ms-2 d-none" 
+                   data-sync-target="spinner" 
+                   role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          <% end %>
+        </li>
+        
+        <li>
+          <button type="button" 
+                  class="dropdown-item" 
+                  data-listing-selection-target="migrateSelected"
+                  data-action="click->listing-selection#migrate"
+                  disabled>
+            Migrate Selected (<span data-listing-selection-target="selectedCount">0</span>)
+          </button>
+        </li>
+        
+        <li>
+          <button type="button" 
+                  class="dropdown-item" 
+                  id="migrateAll"
+                  data-action="click->listing-selection#migrateAll">
+            Migrate All
+          </button>
+        </li>
+      </ul>
     </div>
   </div>
 

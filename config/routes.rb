@@ -32,8 +32,7 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  get 'dashboard', to: 'dashboard#index', as: :dashboard
-  get 'shopify_products', to: 'shopify_products#index', as: :shopify_products   
+  get 'dashboard', to: 'dashboard#index', as: :dashboard  
   get 'settings', to: 'settings#index', as: :settings
   get 'orders', to: 'orders#index', as: :orders
 
@@ -63,6 +62,11 @@ Rails.application.routes.draw do
 
   namespace :admin do
     resources :jobs, only: [:index]
+  end
+
+  namespace :shopify do
+    resources :products, only: [:index]
+    resources :synchronizations, only: [:create]
   end
 
   resources :settings, only: [:index] do

@@ -13,6 +13,7 @@ class ShopifyProduct < ApplicationRecord
   # Scopes
   scope :active, -> { where(status: 'active') }
   scope :published, -> { where(published: true) }
+  scope :needs_image_sync, -> { where('images_last_synced_at IS NULL OR images_last_synced_at < updated_at') }
 
   # Helper methods
   def active?
@@ -31,17 +32,34 @@ class ShopifyProduct < ApplicationRecord
     "gid://shopify/ProductVariant/#{shopify_variant_id}"
   end
 
+  def primary_image_url
+    image_urls&.first
+  end
+
+  def needs_image_sync?
+    images_last_synced_at.nil? || images_last_synced_at < updated_at
+  end
+
   def cache_images
     return if image_urls.blank?
+
+    # Delete existing images to prevent duplicates
+    images.purge if images.attached?
 
     image_urls.each do |url|
       begin
         images.attach(io: URI.open(url), filename: File.basename(url))
+        Rails.logger.info "Successfully cached image from #{url} for product #{shopify_product_id}"
       rescue => e
-        Rails.logger.error "Failed to cache image from #{url}: #{e.message}"
+        Rails.logger.error "Failed to cache image from #{url} for product #{shopify_product_id}: #{e.message}"
       end
     end
     
     update(images_last_synced_at: Time.current)
   end
-end 
+
+  def sync_images
+    return unless needs_image_sync?
+    cache_images
+  end
+end
