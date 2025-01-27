@@ -12,6 +12,18 @@
       <%= link_to "On eBay", kuralis_products_path(filter: 'ebay'), 
           class: "btn #{@filter == 'ebay' ? 'btn-primary' : 'btn-outline-secondary'}" %>
     </div>
+
+    <div class="btn-group">
+      <%= link_to bulk_listing_kuralis_products_path(platform: 'shopify'), 
+          class: "btn btn-outline-primary" do %>
+        <i class="bi bi-shop me-1"></i>Bulk List to Shopify
+      <% end %>
+      
+      <%= link_to bulk_listing_kuralis_products_path(platform: 'ebay'), 
+          class: "btn btn-outline-warning" do %>
+        <i class="bi bi-tags me-1"></i>Bulk List to eBay
+      <% end %>
+    </div>
   </div>
 
   <%= form_tag bulk_action_kuralis_products_path, method: :post, id: 'products-form' do %>

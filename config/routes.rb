@@ -41,6 +41,8 @@ Rails.application.routes.draw do
     resources :products, only: [:index] do
       collection do
         post :bulk_action
+        get :bulk_listing
+        post :process_bulk_listing
       end
     end
   end
