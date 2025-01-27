@@ -84,3 +84,4 @@ gem 'down'
 
 # Pagination
 gem 'kaminari'
+
