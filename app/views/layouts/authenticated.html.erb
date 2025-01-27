@@ -9,6 +9,7 @@
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.5.0/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <%= javascript_importmap_tags %>
   </head>
 
@@ -29,11 +30,24 @@
                   <i class="bi bi-shop"></i> Kuralis Products
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="<%= ebay_listings_path %>">
-                  <i class="bi bi-cart"></i> eBay Listings
-                </a>
-              </li>
+              
+              <% if current_shop.shopify_ebay_account.present? %>
+                <li class="nav-item">
+                  <a class="nav-link" href="<%= ebay_listings_path %>">
+                    <i class="bi bi-cart"></i> eBay Listings
+                  </a>
+                </li>
+              <% else %>
+                <li class="nav-item">
+                  <span class="nav-link disabled" 
+                        data-bs-toggle="tooltip" 
+                        data-bs-placement="right" 
+                        title="Please connect your eBay account in Settings to access eBay listings">
+                    <i class="bi bi-cart"></i> eBay Listings
+                  </span>
+                </li>
+              <% end %>
+
               <li class="nav-item">
                 <a class="nav-link" href="<%= shopify_products_path %>">
                   <i class="bi bi-box-seam"></i> Shopify Products
@@ -68,5 +82,17 @@
         </main>
       </div>
     </div>
+
+    <script>
+      // Initialize tooltips when the DOM is fully loaded
+      document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl, {
+            trigger: 'hover'
+          })
+        })
+      })
+    </script>
   </body>
 </html> 

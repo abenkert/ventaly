@@ -3,6 +3,8 @@
 class AuthenticatedController < ApplicationController
   include ShopifyApp::EnsureHasSession
 
+  helper_method :current_shop
+  
   protected 
   
   def current_shop

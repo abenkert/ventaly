@@ -22,13 +22,13 @@ default: &default
 
 development:
   <<: *default
-  database: ventaly_development
+  database: kuralis_development
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.
   # When left blank, PostgreSQL will use the default role. This is
   # the same name as the operating system user running Rails.
-  username: ventaly
+  username: kuralis
 
   # The password associated with the PostgreSQL role (username).
   password: password
@@ -56,8 +56,8 @@ development:
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: ventaly_test
-  username: ventaly
+  database: kuralis_test
+  username: kuralis
 
   # The password associated with the PostgreSQL role (username).
   password: password
@@ -83,20 +83,16 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  primary: &primary_production
-    <<: *default
-    database: ventaly_production
-    username: ventaly
-    password: <%= ENV["VENTALY_DATABASE_PASSWORD"] %>
+  <<: *default
+  database: kuralis_production
+  username: ventaly
+  password: <%= ENV["VENTALY_DATABASE_PASSWORD"] %>
   cache:
-    <<: *primary_production
-    database: ventaly_production_cache
+    database: kuralis_production_cache
     migrations_paths: db/cache_migrate
   queue:
-    <<: *primary_production
-    database: ventaly_production_queue
+    database: kuralis_production_queue
     migrations_paths: db/queue_migrate
   cable:
-    <<: *primary_production
     database: ventaly_production_cable
     migrations_paths: db/cable_migrate
