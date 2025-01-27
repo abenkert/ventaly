@@ -8,7 +8,20 @@ import * as bootstrap from "bootstrap"
 window.Popper = Popper
 
 // Initialize Bootstrap tooltips
-document.addEventListener("turbo:load", () => {
-  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
-  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
-});
+const initTooltips = () => {
+  // Dispose existing tooltips
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+    const tooltip = bootstrap.Tooltip.getInstance(el);
+    if (tooltip) {
+      tooltip.dispose();
+    }
+  });
+  
+  // Initialize new tooltips
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  const tooltipList = [...tooltipTriggerList].map(el => new bootstrap.Tooltip(el));
+};
+
+// Initialize on first load and after Turbo navigation
+document.addEventListener("turbo:load", initTooltips);
+document.addEventListener("turbo:render", initTooltips);

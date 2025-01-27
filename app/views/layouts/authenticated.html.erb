@@ -41,13 +41,15 @@
                   </a>
                 </li>
               <% else %>
-                <li class="nav-item">
-                  <span class="nav-link disabled text-muted" 
-                        style="cursor: not-allowed;"
-                        data-toggle="tooltip"
-                        title="Please connect your eBay account in Settings to access eBay listings">
+                <li class="nav-item"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="right"
+                    title="Please connect your eBay account in Settings to access eBay listings">
+                  <a class="nav-link disabled text-muted" 
+                     href="#"
+                     style="cursor: not-allowed;">
                     <i class="bi bi-cart"></i> eBay Listings
-                  </span>
+                  </a>
                 </li>
               <% end %>
 
