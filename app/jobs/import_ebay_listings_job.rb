@@ -6,6 +6,10 @@ class ImportEbayListingsJob < ApplicationJob
     ebay_account = shop.shopify_ebay_account
     return unless ebay_account
 
+    # Track existing listings before import
+    existing_item_ids = ebay_account.ebay_listings.pluck(:ebay_item_id)
+    processed_item_ids = []
+
     token_service = EbayTokenService.new(shop)
     page = 1
 
@@ -15,8 +19,21 @@ class ImportEbayListingsJob < ApplicationJob
       
       if response&.at_xpath('//ns:Ack', namespaces)&.text == 'Success'
         items = response.xpath('//ns:Item', namespaces)
-        process_items(items, ebay_account)
+        processed_item_ids += process_items(items, ebay_account)
         
+        # Handle deletions - mark listings as ended if they no longer exist on eBay
+        deleted_item_ids = existing_item_ids - processed_item_ids
+        if deleted_item_ids.any?
+          ebay_account.ebay_listings
+                      .where(ebay_item_id: deleted_item_ids)
+                      .update_all(
+                        ebay_status: 'ended',
+                        last_sync_at: Time.current
+                      )
+          
+          Rails.logger.info "Marked #{deleted_item_ids.size} listings as ended"
+        end
+
         ebay_account.update(last_listing_import_at: Time.current)
       end
     rescue => e
@@ -27,12 +44,14 @@ class ImportEbayListingsJob < ApplicationJob
   private
 
   def process_items(items, ebay_account)
-    # Define namespace for xpath queries
+    processed_ids = []
     namespaces = { 'ns' => 'urn:ebay:apis:eBLBaseComponents' }
     
     items.each do |item|
       begin
         ebay_item_id = item.at_xpath('.//ns:ItemID', namespaces).text
+        processed_ids << ebay_item_id
+        
         listing = ebay_account.ebay_listings.find_or_initialize_by(ebay_item_id: ebay_item_id)
 
         # Update attributes regardless of whether it's a new or existing record
@@ -71,6 +90,8 @@ class ImportEbayListingsJob < ApplicationJob
         Rails.logger.error(e.backtrace.join("\n"))
       end
     end
+    
+    processed_ids
   end
 
   def extract_image_urls(item, namespaces)

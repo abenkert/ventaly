@@ -6,6 +6,9 @@ class ImportShopifyProductsJob < ApplicationJob
     client = ShopifyAPI::Clients::Graphql::Admin.new(session: shop.shopify_session)
 
     begin
+      # Track existing products before import
+      existing_product_ids = shop.shopify_products.pluck(:shopify_product_id)
+      processed_product_ids = []
       after_cursor = nil
       
       loop do
@@ -14,14 +17,12 @@ class ImportShopifyProductsJob < ApplicationJob
           variables: { 
             first: 10, 
             after: after_cursor,
-            # Add date filter if last_sync_time is provided
-            query: last_sync_time ? "updated_at:>#{last_sync_time.iso8601}" : nil
+            query: nil
           }
         )
 
-        pp response
-
-        process_products(response.body["data"]["products"]["edges"], shop)
+        products = response.body["data"]["products"]["edges"]
+        processed_product_ids += process_products(products, shop)
 
         page_info = response.body["data"]["products"]["pageInfo"]
         
@@ -32,8 +33,19 @@ class ImportShopifyProductsJob < ApplicationJob
         end
       end
 
-      # May want to implement this in the future
-      # shop.update(last_shopify_sync_at: Time.current)
+      # Handle deletions - mark products as inactive if they no longer exist in Shopify
+      deleted_product_ids = existing_product_ids - processed_product_ids
+      if deleted_product_ids.any?
+        shop.shopify_products
+            .where(shopify_product_id: deleted_product_ids)
+            .update_all(
+              status: 'deleted',
+              last_synced_at: Time.current
+            )
+        
+        Rails.logger.info "Marked #{deleted_product_ids.size} products as deleted"
+      end
+
       Rails.logger.info "Completed Shopify products import for shop #{shop.id}"
     rescue => e
       Rails.logger.error "Error importing Shopify products: #{e.message}"
@@ -54,16 +66,17 @@ class ImportShopifyProductsJob < ApplicationJob
   end
 
   def process_products(products, shop)
+    processed_ids = []
+    
     products.each do |edge|
       begin
         product = edge["node"]
         variant = product["variants"]["edges"].first["node"]
 
-        # Extract numeric IDs from GIDs
         product_id = extract_id_from_gid(product["id"])
+        processed_ids << product_id
+        
         variant_id = extract_id_from_gid(variant["id"])
-
-        # Get image URLs from the product
         image_urls = product["images"]["edges"].map { |img| img["node"]["url"] }
 
         shopify_product = shop.shopify_products.find_or_initialize_by(
@@ -104,6 +117,8 @@ class ImportShopifyProductsJob < ApplicationJob
         Rails.logger.error e.backtrace.join("\n")
       end
     end
+    
+    processed_ids
   end
 
   def products_query
