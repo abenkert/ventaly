@@ -37,7 +37,7 @@ Rails.application.routes.draw do
   get 'orders', to: 'orders#index', as: :orders
 
   namespace :kuralis do
-    resources :products, only: [:index] do
+    resources :products, only: [:index, :destroy] do
       collection do
         post :bulk_action
         get :bulk_listing

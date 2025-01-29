@@ -26,25 +26,46 @@
     </div>
   </div>
 
-  <%= form_tag bulk_action_kuralis_products_path, method: :post, id: 'products-form' do %>
+  <%= form_tag bulk_action_kuralis_products_path, 
+      method: :post, 
+      id: 'products-form',
+      data: { controller: "bulk-actions" } do %>
     <div class="card">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div class="form-check">
-            <%= check_box_tag 'select_all', '1', false, class: 'form-check-input', id: 'select-all' %>
+            <%= check_box_tag 'select_all', '1', false, 
+                class: 'form-check-input', 
+                id: 'select-all',
+                data: { 
+                  "bulk-actions-target": "checkbox",
+                  action: "bulk-actions#toggleAll"
+                } %>
             <label class="form-check-label" for="select-all">Select All</label>
           </div>
           
-          <div class="btn-group">
-            <%= button_tag type: 'submit', name: 'action', value: 'list_shopify', 
-                class: 'btn btn-success', data: { confirm: 'List selected products on Shopify?' } do %>
-              <i class="bi bi-shop me-1"></i>List on Shopify
-            <% end %>
-            
-            <%= button_tag type: 'submit', name: 'action', value: 'list_ebay', 
-                class: 'btn btn-warning', data: { confirm: 'List selected products on eBay?' } do %>
-              <i class="bi bi-tags me-1"></i>List on eBay
-            <% end %>
+          <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" 
+                    type="button" 
+                    data-bs-toggle="dropdown" 
+                    disabled 
+                    data-bulk-actions-target="bulkActionsButton">
+              <i class="bi bi-gear me-1"></i>Bulk Actions
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <%= button_tag type: 'submit', name: 'action', value: 'list_shopify', 
+                    class: 'dropdown-item', data: { confirm: 'List selected products on Shopify?' } do %>
+                  <i class="bi bi-shop me-2"></i>List on Shopify
+                <% end %>
+              </li>
+              <li>
+                <%= button_tag type: 'submit', name: 'action', value: 'list_ebay', 
+                    class: 'dropdown-item', data: { confirm: 'List selected products on eBay?' } do %>
+                  <i class="bi bi-tags me-2"></i>List on eBay
+                <% end %>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -71,6 +92,10 @@
                   <td>
                     <%= check_box_tag "product_ids[]", product.id, false, 
                         class: 'form-check-input product-checkbox',
+                        data: {
+                          "bulk-listing-target": "checkbox",
+                          action: "bulk-listing#toggleSelection"
+                        },
                         disabled: (product.shopify_product.present? && product.ebay_listing.present?) %>
                   </td>
                   <td>
@@ -78,9 +103,9 @@
                       <%= image_tag product.images.first, class: "img-thumbnail", 
                           style: "max-width: 50px; max-height: 50px;" %>
                     <% else %>
-                      <%= image_tag "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAADWUlEQVR4nO2ZW4hNURjHf+OScTcul3EpSrnMTEIukYcZeVFePHiZPCgpLy55kHLJA0V5kEwpD5JCKeWBJg/uEhGAyG1IDGaM22CY8Zf/qtVp77P3OWevtfdR51e/7j17f+v71l5rfd9aG/LIIw8P6AZUACeAh8B74DvwA/gEPAOuAweBhUCfbIgoBc4Cv4FEis934BwwPFMiKoHXaQhIdh4CQ0IWUgC0ehBgOzuAwqBFzAE+ByjCOu+AyUGJWAZ0hyTCOl+BFX6LKAY6QhZhnU5gpl8irgQQPdI5lwFvPQRPJ3AXOAqsAeqAKcAIYAAwCBgLzALWASeAe8AX+e4PwGov4i8GJOIJUAcsAIb6iEJDgSXAJSk3AVz0ImJ7hkW8AVYD/QIOpf7AWuC1lH/HrYjSTAn5DCwH8kMesvnAKqBN6rntRsRFn0V0yQQwKgPvRDEwEXgjdd1MVcQcH0V0AxuBfhl+K4YDz6W+y6mI2OWTiC/AMg+RKChMkDpbUxFR7YOITmBexHrCGGCH1N3mJGK/RxEJYFMEpzKTzVYDPVJ/vZ2IPR5F7ItgJEpkPTFZ7KiViAaPIhoi1lsKgTOyMB6yEjHfg4guYFrERBQBG2QdGmYlYp4HEV+BqRETYbJB6m+2EjHLg4i3wOSIiTDZKPXfshIxyYOIZ8C4iIkw2SL1P7ASUepBxH1gVMREVEv9nVYiijyIuAUMj5iISql/QOQWxFQXxF1gSMRElEv9CVv3ckHcAAZHTESJ1J+wdS8XxFVgUMRE9JX6E7bu5YI4D/SPmIgiqT9h614uiNNAvwhFpzKpP2HrXi6IY0BhxESYNaXD1r1cEIeB/IiJMJtYHbbu5YLYCeRFTITZDv9j614uiK1AXsREmK3+hK17uSA2RlCE2TFM2LqXC2JdBEWY49OErXu5IFZHUITZx0zYupcLYnkERZhjhoSte7kglkZQhDn7Tdi6lwtiUQRFmGPphK17uSDmRlCEOf9O2LqXC2J2BEWYi4KErXu5IGZEUITpEQlb93JBTIugCNNHErbulQ0iRtqIyIqIkUB7BESYXpKwda9si6gAPmRYhOklCVv3ypYIs66YS8OPGRBheknC1r2yIcJco5nrNHOxdgqoAXpn+sHzyON/xF/72MQMF8x22QAAAABJRU5ErkJggg==",
-                                  class: "img-thumbnail",
-                                  style: "max-width: 50px; max-height: 50px;" %>
+                      <%= image_tag "placeholder.png",
+                          class: "img-thumbnail",
+                          style: "max-width: 50px; max-height: 50px;" %>
                     <% end %>
                   </td>
                   <td><%= product.title %></td>
@@ -94,39 +119,74 @@
                   </td>
                   <td>
                     <% if product.shopify_product %>
-                      <span class="badge <%= product.shopify_product.active? ? 'bg-success' : 'bg-secondary' %>">
-                        <%= product.shopify_product.status&.titleize %>
+                      <span class="badge bg-success d-inline-flex align-items-center">
+                        <i class="bi bi-shop me-1"></i>
+                        Listed
                         (<%= number_to_currency(product.shopify_product.price) %>)
                       </span>
                     <% else %>
-                      <div class="btn-group">
-                        <%= button_tag type: 'submit', name: 'action', value: "list_shopify_#{product.id}", 
-                            class: 'btn btn-sm btn-outline-success' do %>
-                          <i class="bi bi-plus-circle me-1"></i>List
-                        <% end %>
-                      </div>
+                      <span class="badge bg-secondary d-inline-flex align-items-center">
+                        <i class="bi bi-dash-circle me-1"></i>
+                        Unlisted
+                      </span>
                     <% end %>
                   </td>
                   <td>
                     <% if product.ebay_listing %>
-                      <span class="badge <%= product.ebay_listing.active? ? 'bg-success' : 'bg-secondary' %>">
-                        <%= product.ebay_listing.ebay_status&.titleize %>
+                      <span class="badge bg-warning text-dark d-inline-flex align-items-center">
+                        <i class="bi bi-tags me-1"></i>
+                        Listed
                         (<%= number_to_currency(product.ebay_listing.sale_price) %>)
                       </span>
                     <% else %>
-                      <div class="btn-group">
-                        <%= button_tag type: 'submit', name: 'action', value: "list_ebay_#{product.id}", 
-                            class: 'btn btn-sm btn-outline-warning' do %>
-                          <i class="bi bi-plus-circle me-1"></i>List
-                        <% end %>
-                      </div>
+                      <span class="badge bg-secondary d-inline-flex align-items-center">
+                        <i class="bi bi-dash-circle me-1"></i>
+                        Unlisted
+                      </span>
                     <% end %>
                   </td>
                   <td>
                     <%= time_ago_in_words(product.last_synced_at) if product.last_synced_at %> ago
                   </td>
                   <td>
-                    <%= link_to "View", "#", class: "btn btn-sm btn-outline-primary" %>
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Actions
+                      </button>
+                      <ul class="dropdown-menu">
+                        <% unless product.shopify_product %>
+                          <li>
+                            <%= button_to bulk_action_kuralis_products_path(product_ids: [product.id], action: 'list_shopify'),
+                                method: :post,
+                                class: "dropdown-item" do %>
+                              <i class="bi bi-shop me-2"></i>List on Shopify
+                            <% end %>
+                          </li>
+                        <% end %>
+                        <% unless product.ebay_listing %>
+                          <li>
+                            <%= button_to bulk_action_kuralis_products_path(product_ids: [product.id], action: 'list_ebay'),
+                                method: :post,
+                                class: "dropdown-item" do %>
+                              <i class="bi bi-tags me-2"></i>List on eBay
+                            <% end %>
+                          </li>
+                        <% end %>
+                        <li>
+                          <%= link_to "#", class: "dropdown-item" do %>
+                            <i class="bi bi-eye me-2"></i>View
+                          <% end %>
+                        </li>
+                        <li>
+                          <%= button_to kuralis_product_path(product), 
+                              method: :delete,
+                              class: "dropdown-item text-danger",
+                              form: { data: { turbo_confirm: "Are you sure you want to delete this product?" } } do %>
+                            <i class="bi bi-trash me-2"></i>Delete
+                          <% end %>
+                        </li>
+                      </ul>
+                    </div>
                   </td>
                 </tr>
               <% end %>

@@ -68,6 +68,33 @@ module Kuralis
                   notice: "Bulk listing process started for #{product_ids.count} products. You'll be notified when complete."
     end
 
+    def destroy
+      @product = KuralisProduct.find(params[:id])
+      
+      if @product.destroy
+        respond_to do |format|
+          format.html { redirect_to kuralis_products_path, notice: "Product was successfully deleted." }
+          format.json { head :no_content }
+          format.turbo_stream { 
+            flash.now[:notice] = "Product was successfully deleted."
+            render turbo_stream: [
+              turbo_stream.remove(@product),
+              turbo_stream.prepend("flash", partial: "shared/flash")
+            ]
+          }
+        end
+      else
+        respond_to do |format|
+          format.html { redirect_to kuralis_products_path, alert: "Failed to delete product." }
+          format.json { render json: @product.errors, status: :unprocessable_entity }
+          format.turbo_stream {
+            flash.now[:alert] = "Failed to delete product."
+            render turbo_stream: turbo_stream.prepend("flash", partial: "shared/flash")
+          }
+        end
+      end
+    end
+
     private
 
     def apply_filter(query)
