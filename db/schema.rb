@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_28_180709) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_29_160018) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -108,12 +108,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_28_180709) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "images_last_synced_at"
+    t.decimal "weight_oz", precision: 8, scale: 2
+    t.jsonb "tags", default: [], null: false
     t.index ["ebay_listing_id"], name: "index_kuralis_products_on_ebay_listing_id"
     t.index ["shop_id"], name: "index_kuralis_products_on_shop_id"
     t.index ["shopify_product_id"], name: "index_kuralis_products_on_shopify_product_id"
     t.index ["sku"], name: "index_kuralis_products_on_sku"
     t.index ["source_platform"], name: "index_kuralis_products_on_source_platform"
     t.index ["status"], name: "index_kuralis_products_on_status"
+    t.index ["tags"], name: "index_kuralis_products_on_tags", using: :gin
   end
 
   create_table "notifications", force: :cascade do |t|
