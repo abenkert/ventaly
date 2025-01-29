@@ -61,6 +61,8 @@ Rails.application.routes.draw do
     end
     post 'shipping_policies', to: 'shipping_policies#create'
     patch 'shipping_weights', to: 'shipping_weights#update'
+    post 'store_categories', to: 'store_categories#create'
+    patch 'category_tags', to: 'category_tags#update'
   end
 
   namespace :admin do
