@@ -74,6 +74,8 @@ gem 'bootstrap', '~> 5.3.0'
 gem 'sassc-rails'
 gem 'sidekiq'
 gem 'redis'
+gem 'cgi'
+gem 'nokogiri'
 
 # For AWS S3 storage
 gem 'aws-sdk-s3'

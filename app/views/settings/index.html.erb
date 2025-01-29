@@ -1,11 +1,106 @@
 <h1>Settings</h1>
 
-<% if @ebay_account_linked %>
-  <p>Your eBay account is linked.</p>
-<% else %>
-  <p>Your eBay account is not linked.</p>
-  <%= link_to 'Link eBay Account', ebay_auth_path, class: 'btn btn-primary' %>
-<% end %>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">eBay Integration</h5>
+  </div>
+  
+  <div class="card-body">
+    <% if @ebay_account_linked %>
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <p class="mb-0">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            Your eBay account is linked
+          </p>
+        </div>
+        <%= button_to ebay_unlink_path, 
+              method: :delete,
+              class: "btn btn-outline-danger",
+              data: { 
+                turbo_confirm: "Are you sure you want to unlink your eBay account? This will remove all eBay listings from your account.",
+                turbo: true 
+              } do %>
+          <i class="bi bi-x-circle me-1"></i>Unlink eBay Account
+        <% end %>
+      </div>
+    <% else %>
+      <p class="mb-0">
+        <i class="bi bi-x-circle text-danger me-2"></i>
+        Your eBay account is not linked
+      </p>
+      <%= link_to ebay_auth_path, class: 'btn btn-primary mt-3' do %>
+        <i class="bi bi-link-45deg me-1"></i>Link eBay Account
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">eBay Shipping Profiles</h5>
+    <% if @ebay_account_linked %>
+      <%= button_to ebay_shipping_policies_path,
+            method: :post,
+            class: "btn btn-outline-primary btn-sm",
+            data: { turbo: true } do %>
+        <i class="bi bi-arrow-clockwise me-1"></i>Update Policies
+      <% end %>
+    <% end %>
+  </div>
+  
+  <div class="card-body">
+    <% if @ebay_account_linked %>
+      <% if @shop.shopify_ebay_account.shipping_profiles.present? %>
+        <%= form_with url: ebay_shipping_weights_path, method: :patch, class: "shipping-weights-form" do |f| %>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Shipping Profile</th>
+                  <th>Weight (oz)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @shop.shopify_ebay_account.shipping_profiles.each do |profile| %>
+                  <tr>
+                    <td><%= profile['name'] %></td>
+                    <td>
+                      <div class="input-group" style="max-width: 200px;">
+                        <%= f.number_field "weights[#{profile['id']}]",
+                              value: @shop.shopify_ebay_account.shipping_profile_weight(profile['id']),
+                              class: "form-control",
+                              step: "0.1",
+                              min: "0" %>
+                        <span class="input-group-text">oz</span>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-3">
+            <%= f.submit "Save Weights", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="text-center py-3">
+          <p class="text-muted mb-0">
+            No shipping profiles found. Click "Update Policies" to fetch your eBay shipping profiles.
+          </p>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="text-center py-3">
+        <p class="text-muted mb-0">
+          Link your eBay account to manage shipping profiles.
+        </p>
+      </div>
+    <% end %>
+  </div>
+</div>
 
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">

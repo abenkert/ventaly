@@ -49,6 +49,7 @@ Rails.application.routes.draw do
   namespace :ebay do
     get 'auth', to: 'auth#auth'
     get 'callback', to: 'auth#callback'
+    delete 'auth', to: 'auth#destroy', as: :unlink
     post 'notifications', to: 'notifications#create'
     resources :listings, only: [:index] do
       collection do
@@ -58,6 +59,8 @@ Rails.application.routes.draw do
         end
       end
     end
+    post 'shipping_policies', to: 'shipping_policies#create'
+    patch 'shipping_weights', to: 'shipping_weights#update'
   end
 
   namespace :admin do

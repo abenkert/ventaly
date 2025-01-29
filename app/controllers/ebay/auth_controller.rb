@@ -51,5 +51,19 @@ module Ebay
     rescue StandardError => e
       redirect_to settings_path, alert: "Failed to connect eBay account: #{e.message}"
     end
+
+    def destroy
+      Ebay::UnlinkAccountJob.perform_later(current_shop.id)
+      
+      respond_to do |format|
+        format.html do
+          flash[:notice] = 'eBay account unlink process started.'
+          redirect_to settings_path
+        end
+        format.turbo_stream do
+          flash.now[:notice] = 'eBay account unlink process started.'
+        end
+      end
+    end
   end
 end 

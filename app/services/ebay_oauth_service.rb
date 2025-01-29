@@ -9,11 +9,14 @@ class EbayOauthService
     @client_id = ENV['EBAY_CLIENT_ID']
     @client_secret = ENV['EBAY_CLIENT_SECRET']
     @ru_name = ENV['EBAY_RUNAME']
-    @scopes = 'https://api.ebay.com/oauth/api_scope'
+    @scopes = ['https://api.ebay.com/oauth/api_scope',
+      'https://api.ebay.com/oauth/api_scope/sell.inventory',
+      'https://api.ebay.com/oauth/api_scope/sell.account',
+      'https://api.ebay.com/oauth/api_scope/sell.fulfillment']
   end
 
-  def authorization_url()
-    "#{BASE_URL}?client_id=#{@client_id}&response_type=code&redirect_uri=#{ERB::Util.url_encode(@ru_name)}&scope=#{@scopes}"
+  def authorization_url
+    "#{BASE_URL}?client_id=#{@client_id}&response_type=code&redirect_uri=#{ERB::Util.url_encode(@ru_name)}&scope=#{ERB::Util.url_encode(@scopes.join(' '))}"
   end
 
   def fetch_access_token(auth_code)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_01_27_130729) do
+ActiveRecord::Schema[8.0].define(version: 2025_01_28_180709) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -65,7 +65,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_27_130729) do
     t.boolean "best_offer_enabled", default: false
     t.string "ebay_status"
     t.datetime "last_sync_at"
+    t.string "store_category_id"
     t.index ["shopify_ebay_account_id"], name: "index_ebay_listings_on_shopify_ebay_account_id"
+    t.index ["store_category_id"], name: "index_ebay_listings_on_store_category_id"
   end
 
   create_table "job_runs", force: :cascade do |t|
@@ -190,6 +192,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_01_27_130729) do
     t.datetime "updated_at", null: false
     t.datetime "refresh_token_expires_at"
     t.datetime "last_listing_import_at"
+    t.jsonb "store_categories", default: [], null: false
+    t.jsonb "shipping_profiles", default: [], null: false
+    t.jsonb "shipping_profile_weights", default: {}, null: false
+    t.jsonb "category_tag_mappings", default: {}, null: false
     t.index ["shop_id"], name: "index_shopify_ebay_accounts_on_shop_id"
   end
 

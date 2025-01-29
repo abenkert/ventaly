@@ -85,4 +85,8 @@ class EbayListing < ApplicationRecord
       temp_file&.unlink
     end
   end
+
+  def store_category_name
+    shopify_ebay_account.store_category_name(store_category_id)
+  end
 end 

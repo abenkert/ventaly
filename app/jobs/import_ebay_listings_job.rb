@@ -22,17 +22,18 @@ class ImportEbayListingsJob < ApplicationJob
         processed_item_ids += process_items(items, ebay_account)
         
         # Handle deletions - mark listings as ended if they no longer exist on eBay
-        deleted_item_ids = existing_item_ids - processed_item_ids
-        if deleted_item_ids.any?
-          ebay_account.ebay_listings
-                      .where(ebay_item_id: deleted_item_ids)
-                      .update_all(
-                        ebay_status: 'ended',
-                        last_sync_at: Time.current
-                      )
+        # TODO: Do we want to do this? We can potentially unsync.
+        # deleted_item_ids = existing_item_ids - processed_item_ids
+        # if deleted_item_ids.any?
+        #   ebay_account.ebay_listings
+        #               .where(ebay_item_id: deleted_item_ids)
+        #               .update_all(
+        #                 ebay_status: 'ended',
+        #                 last_sync_at: Time.current
+        #               )
           
-          Rails.logger.info "Marked #{deleted_item_ids.size} listings as ended"
-        end
+        #   Rails.logger.info "Marked #{deleted_item_ids.size} listings as ended"
+        # end
 
         ebay_account.update(last_listing_import_at: Time.current)
       end
@@ -53,20 +54,23 @@ class ImportEbayListingsJob < ApplicationJob
         processed_ids << ebay_item_id
         
         listing = ebay_account.ebay_listings.find_or_initialize_by(ebay_item_id: ebay_item_id)
-
+        description = prepare_description(item.at_xpath('.//ns:Description', namespaces)&.text)
+        location = find_location(description)
         # Update attributes regardless of whether it's a new or existing record
         listing.assign_attributes({
           title: item.at_xpath('.//ns:Title', namespaces)&.text,
+          description: description,
           sale_price: item.at_xpath('.//ns:SellingStatus/ns:CurrentPrice', namespaces)&.text&.to_d,
           original_price: item.at_xpath('.//ns:StartPrice', namespaces)&.text&.to_d,
           quantity: item.at_xpath('.//ns:Quantity', namespaces)&.text&.to_i,
           shipping_profile_id: item.at_xpath('.//ns:SellerProfiles/ns:SellerShippingProfile/ns:ShippingProfileID', namespaces)&.text,
-          location: item.at_xpath('.//ns:Location', namespaces)&.text,
+          location: location,
           image_urls: extract_image_urls(item, namespaces),
           listing_format: item.at_xpath('.//ns:ListingType', namespaces)&.text,
           condition_id: item.at_xpath('.//ns:ConditionID', namespaces)&.text,
           condition_description: item.at_xpath('.//ns:ConditionDisplayName', namespaces)&.text,
           category_id: item.at_xpath('.//ns:PrimaryCategory/ns:CategoryID', namespaces)&.text,
+          store_category_id: item.at_xpath('.//ns:Storefront/ns:StoreCategoryID', namespaces)&.text,
           listing_duration: item.at_xpath('.//ns:ListingDuration', namespaces)&.text,
           end_time: Time.parse(item.at_xpath('.//ns:ListingDetails/ns:EndTime', namespaces)&.text.to_s),
           best_offer_enabled: item.at_xpath('.//ns:BestOfferDetails/ns:BestOfferEnabled', namespaces)&.text == 'true',
@@ -94,6 +98,21 @@ class ImportEbayListingsJob < ApplicationJob
     processed_ids
   end
 
+  def prepare_description(description)
+    CGI.unescapeHTML(description)
+  end
+
+  def find_location(description)
+    doc =Nokogiri::HTML(description)
+    potential_code = doc.at_css('div font')&.text
+    if potential_code&.match?(/\A[OW]\d+.*\z/)
+      location_code = potential_code
+    else
+      location_code = nil
+    end
+    location_code
+  end
+
   def extract_image_urls(item, namespaces)
     urls = []
     picture_details = item.at_xpath('.//ns:PictureDetails', namespaces)
@@ -116,8 +135,6 @@ class ImportEbayListingsJob < ApplicationJob
         <DetailLevel>ReturnAll</DetailLevel>
         <StartTimeFrom>#{start_time_from.iso8601}</StartTimeFrom>
         <StartTimeTo>#{start_time_to.iso8601}</StartTimeTo>
-        <IncludeDescription>true</IncludeDescription>
-        <GranularityLevel>Fine</GranularityLevel>
         <Pagination>
           <EntriesPerPage>30</EntriesPerPage>
           <PageNumber>#{page_number}</PageNumber>
@@ -146,49 +163,4 @@ class ImportEbayListingsJob < ApplicationJob
       nil
     end
   end
-
-    # def fetch_ebay_listings(access_token, page_number, modified_after = nil)
-  #   uri = URI('https://api.ebay.com/ws/api.dll')
-
-  #   # This line belongs after detail level in the xml request
-  #   # I am removing it for now because we want to import all listings and we need to be careful
-  #   # about the modified date and dealing with job failures
-  #   # also the order we recieve listings may be different?
-  #   # #{modified_after ? "<ModTimeFrom>#{modified_after.iso8601}</ModTimeFrom>" : ""}
-    
-  #   xml_request = <<~XML
-  #     <?xml version="1.0" encoding="utf-8"?>
-  #     <GetMyeBaySellingRequest xmlns="urn:ebay:apis:eBLBaseComponents">
-  #       <ActiveList>
-  #         <Include>true</Include>
-  #         <DetailLevel>ReturnAll</DetailLevel>
-  #         <Pagination>
-  #           <EntriesPerPage>1</EntriesPerPage>
-  #           <PageNumber>#{page_number}</PageNumber>
-  #         </Pagination>
-  #       </ActiveList>
-  #     </GetMyeBaySellingRequest>
-  #   XML
-
-  #   headers = {
-  #     'X-EBAY-API-COMPATIBILITY-LEVEL' => '967',
-  #     'X-EBAY-API-IAF-TOKEN' => access_token,
-  #     'X-EBAY-API-DEV-NAME' => ENV['EBAY_DEV_ID'],
-  #     'X-EBAY-API-APP-NAME' => ENV['EBAY_CLIENT_ID'],
-  #     'X-EBAY-API-CERT-NAME' => ENV['EBAY_CLIENT_SECRET'],
-  #     'X-EBAY-API-CALL-NAME' => 'GetMyeBaySelling',
-  #     'X-EBAY-API-SITEID' => '0',
-  #     'Content-Type' => 'text/xml'
-  #   }
-
-  #   begin
-  #     response = Net::HTTP.post(uri, xml_request, headers)
-  #     Rails.logger.info("Raw response: #{response.body}")
-      
-  #     Nokogiri::XML(response.body)
-  #   rescue StandardError => e
-  #     Rails.logger.error("Error fetching eBay listings: #{e.message}")
-  #     nil
-  #   end
-  # end
 end

@@ -1,3 +1,4 @@
+# TODO: This is not functional. A change needs to be made to the notification endpoint url.
 class EbayNotificationService
   def self.subscribe_to_notifications(shop)
     ebay_account = shop.shopify_ebay_account
