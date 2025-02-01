@@ -14,6 +14,7 @@ class ShopifyListingService
         "productSet": {
           "title": @product.title,
           "descriptionHtml": escape_html(@product.description),
+          "tags": @product.tags,
           "files": prepare_product_images,
           "productOptions": [
             {
@@ -35,7 +36,13 @@ class ShopifyListingService
                 }
               ],
               "inventoryItem": {
-                "tracked": true
+                "tracked": true,
+                "measurement": {
+                  "weight": {
+                    "unit": "OZ",
+                    "value": @product.weight_oz
+                  }
+                }
               },
               "inventoryQuantities": [
                 {

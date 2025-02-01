@@ -14,7 +14,7 @@ class BulkListingJob < ApplicationJob
         case platform
         when 'shopify'
             next if product.shopify_product.present?
-            ShopifyListingService.new(product).create_listing
+            Shopify::CreateListingJob.perform_now(product.id)
             successful_ids << product.id
         when 'ebay'
         # TODO: Implement eBay listing creation
