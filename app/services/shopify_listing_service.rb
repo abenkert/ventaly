@@ -39,8 +39,8 @@ class ShopifyListingService
                 "tracked": true,
                 "measurement": {
                   "weight": {
-                    "unit": "OZ",
-                    "value": @product.weight_oz
+                    "unit": "OUNCES",
+                    "value": @product.weight_oz.to_f
                   }
                 }
               },
@@ -86,12 +86,14 @@ class ShopifyListingService
           # Attach the same images from KuralisProduct
           if @product.images.attached?
             @product.images.each do |image|
-              shopify_product.images.attach(
-                io: image.blob.open,
-                filename: image.filename.to_s,
-                content_type: image.content_type,
-                identify: false  # Skip automatic content type identification
-              )
+              image.blob.open do |tempfile|
+                shopify_product.images.attach(
+                  io: tempfile,
+                  filename: image.filename.to_s,
+                  content_type: image.content_type,
+                  identify: false  # Skip automatic content type identification
+                )
+              end
             end
           end
     else

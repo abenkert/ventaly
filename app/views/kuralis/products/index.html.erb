@@ -26,7 +26,7 @@
     </div>
   </div>
 
-  <%= form_tag bulk_action_kuralis_products_path, 
+  <%= form_tag process_bulk_listing_kuralis_products_path, 
       method: :post, 
       id: 'products-form',
       data: { controller: "bulk-actions" } do %>
@@ -156,18 +156,20 @@
                       <ul class="dropdown-menu">
                         <% unless product.shopify_product %>
                           <li>
-                            <%= button_to bulk_action_kuralis_products_path(product_ids: [product.id], action: 'list_shopify'),
+                              <%= link_to process_bulk_listing_kuralis_products_path(product_ids: [product.id], platform: 'shopify'),
                                 method: :post,
-                                class: "dropdown-item" do %>
+                                class: "dropdown-item",
+                                data: { turbo_method: :post, turbo_confirm: 'List this product on Shopify?' } do %>
                               <i class="bi bi-shop me-2"></i>List on Shopify
                             <% end %>
                           </li>
                         <% end %>
                         <% unless product.ebay_listing %>
                           <li>
-                            <%= button_to bulk_action_kuralis_products_path(product_ids: [product.id], action: 'list_ebay'),
+                            <%= link_to process_bulk_listing_kuralis_products_path(product_ids: [product.id], platform: 'ebay'),
                                 method: :post,
-                                class: "dropdown-item" do %>
+                                class: "dropdown-item",
+                                data: { turbo_method: :post, turbo_confirm: 'List this product on eBay?' } do %>
                               <i class="bi bi-tags me-2"></i>List on eBay
                             <% end %>
                           </li>
