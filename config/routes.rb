@@ -34,7 +34,6 @@ Rails.application.routes.draw do
 
   get 'dashboard', to: 'dashboard#index', as: :dashboard  
   get 'settings', to: 'settings#index', as: :settings
-  get 'orders', to: 'orders#index', as: :orders
 
   namespace :kuralis do
     resources :products, only: [:index, :destroy] do
@@ -79,5 +78,9 @@ Rails.application.routes.draw do
       post :sync_locations
       patch :update_default_location
     end
+  end
+
+  resources :orders, only: [:index] do
+    post :trigger_sync_orders, on: :collection
   end
 end

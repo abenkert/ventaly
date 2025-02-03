@@ -16,7 +16,7 @@ module Ebay
       process_recent_orders
 
       # Check older unfulfilled orders less frequently
-    #   process_older_unfulfilled_orders if should_check_older_orders?
+      process_older_unfulfilled_orders if should_check_older_orders?
     end
 
     private
@@ -56,10 +56,11 @@ module Ebay
     end
 
     def fetch_orders(start_time)
+      # TODO: Add pagination support if we ever have more than 100 orders.
       uri = URI(FULFILLMENT_API_URL)
       uri.query = URI.encode_www_form({
         filter: "creationdate:[#{start_time}]",
-        limit: 1,
+        limit: 100,
         offset: 0
       })
 
@@ -114,11 +115,12 @@ module Ebay
     end
 
     def update_order_status(order, ebay_order)
+      order_status = determine_order_status(ebay_order)
       order.assign_attributes(
         subtotal: ebay_order['pricingSummary']['priceSubtotal']['value'],
         total_price: ebay_order['pricingSummary']['total']['value'],
         shipping_cost: ebay_order['pricingSummary']['deliveryCost']['value'],
-        fulfillment_status: ebay_order['orderFulfillmentStatus'],
+        fulfillment_status: order_status,
         payment_status: ebay_order['orderPaymentStatus'],
         paid_at: ebay_order['paymentSummary']['payments']&.first&.dig('paymentDate'),
         shipping_address: extract_shipping_address(ebay_order),
@@ -131,6 +133,13 @@ module Ebay
 
       order.save!
       process_order_items(order, ebay_order)
+    end
+
+    def determine_order_status(ebay_order)
+      order_status = ebay_order['orderFulfillmentStatus']
+      order_status = 'cancelled' if order_status == 'NOT_STARTED' && ebay_order['cancelStatus']['cancelState'] == 'CANCELED'
+
+      order_status
     end
 
     def map_fulfillment_status(status)

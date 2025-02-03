@@ -19,6 +19,14 @@ class OrdersController < AuthenticatedController
               end
             
     @tab = params[:tab] || 'all'
-    @orders = @orders.order(order_placed_at: :desc).page(params[:page])
+    @orders = @orders.order(order_placed_at: :desc).page(params[:page]).per(25)
+  end
+
+  def trigger_sync_orders
+    FetchShopifyOrdersJob.perform_later(current_shop.id)
+    Ebay::SyncOrdersJob.perform_later(current_shop.id)
+    
+    flash[:notice] = "Orders sync has been triggered"
+    redirect_to orders_path
   end
 end 

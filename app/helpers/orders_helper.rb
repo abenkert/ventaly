@@ -6,6 +6,8 @@ module OrdersHelper
     when 'in_progress'
       'bg-info'
     when 'not_started'
+      'bg-warning'
+    when 'cancelled'
       'bg-danger'
     else
       'bg-secondary'
@@ -18,6 +20,8 @@ module OrdersHelper
       'Shipped'
     when 'in_progress'
       'Partially Shipped'
+    when 'cancelled'
+      'Cancelled'
     when 'not_started'
       'Awaiting Shipment'
     else
