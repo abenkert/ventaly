@@ -1,26 +1,37 @@
 module OrdersHelper
-  def status_color_class(status)
-    case status
-    when 'pending'
-      'bg-warning'
-    when 'paid'
+  def shipment_status_color_class(status)
+    case status&.downcase
+    when 'fulfilled'
       'bg-success'
-    when 'shipped'
+    when 'in_progress'
       'bg-info'
-    when 'completed'
-      'bg-success'
+    when 'not_started'
+      'bg-danger'
     else
       'bg-secondary'
     end
   end
 
+  def fulfillment_status_label(status)
+    case status&.downcase
+    when 'fulfilled'
+      'Shipped'
+    when 'in_progress'
+      'Partially Shipped'
+    when 'not_started'
+      'Awaiting Shipment'
+    else
+      'Unknown'
+    end
+  end
+
   def payment_status_color_class(status)
     case status&.downcase
-    when 'complete', 'completed'
+    when 'paid'
       'bg-success'
-    when 'pending'
+    when 'partially_refunded'
       'bg-warning'
-    when 'incomplete'
+    when 'incomplete', 'pending'
       'bg-danger'
     else
       'bg-secondary'

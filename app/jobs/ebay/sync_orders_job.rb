@@ -25,8 +25,7 @@ module Ebay
       start_time = RECENT_WINDOW.ago.iso8601
       
       orders_response = fetch_orders(start_time)
-      pp orders_response
-    #   process_orders(orders_response)
+      process_orders(orders_response)
       
       Rails.logger.info "Processed recent orders for shop #{@shop.id}"
     end
@@ -60,7 +59,7 @@ module Ebay
       uri = URI(FULFILLMENT_API_URL)
       uri.query = URI.encode_www_form({
         filter: "creationdate:[#{start_time}]",
-        limit: 100,
+        limit: 1,
         offset: 0
       })
 
@@ -116,14 +115,19 @@ module Ebay
 
     def update_order_status(order, ebay_order)
       order.assign_attributes(
-        status: map_fulfillment_status(ebay_order['fulfillmentStatus']),
+        subtotal: ebay_order['pricingSummary']['priceSubtotal']['value'],
         total_price: ebay_order['pricingSummary']['total']['value'],
         shipping_cost: ebay_order['pricingSummary']['deliveryCost']['value'],
-        payment_status: ebay_order['paymentSummary']['status'],
+        fulfillment_status: ebay_order['orderFulfillmentStatus'],
+        payment_status: ebay_order['orderPaymentStatus'],
+        paid_at: ebay_order['paymentSummary']['payments']&.first&.dig('paymentDate'),
         shipping_address: extract_shipping_address(ebay_order),
         customer_name: extract_buyer_name(ebay_order),
         order_placed_at: ebay_order['creationDate']
       )
+
+      # I DONT THINK WE NEED THIS STATUS FIELD SINCE WE HAVE PAYMENT AND FULFILLMENT STATUS
+      # status: map_fulfillment_status(ebay_order['fulfillmentStatus']),
 
       order.save!
       process_order_items(order, ebay_order)
@@ -163,13 +167,14 @@ module Ebay
       ebay_order['lineItems'].each do |line_item|
         order_item = order.order_items.find_or_initialize_by(
           platform: 'ebay',
-          platform_item_id: line_item['itemId']
+          platform_item_id: line_item['legacyItemId']
         )
 
+        kuralis_product = KuralisProduct.find_by(ebay_listing_id: line_item['legacyItemId'])
         order_item.update!(
           title: line_item['title'],
           quantity: line_item['quantity'],
-          price: line_item['total']['value']
+          kuralis_product: kuralis_product
         )
       end
     end
