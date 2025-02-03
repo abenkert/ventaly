@@ -1,0 +1,5 @@
+# :schedule:
+#   ebay_sync_orders:
+#     every: '2m'   # Runs every 2 minutes
+#     class: Ebay::SyncOrdersJob
+#     queue: default 
