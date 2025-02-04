@@ -20,20 +20,6 @@ class ImportEbayListingsJob < ApplicationJob
       if response&.at_xpath('//ns:Ack', namespaces)&.text == 'Success'
         items = response.xpath('//ns:Item', namespaces)
         processed_item_ids += process_items(items, ebay_account)
-        
-        # Handle deletions - mark listings as ended if they no longer exist on eBay
-        # TODO: Do we want to do this? We can potentially unsync.
-        # deleted_item_ids = existing_item_ids - processed_item_ids
-        # if deleted_item_ids.any?
-        #   ebay_account.ebay_listings
-        #               .where(ebay_item_id: deleted_item_ids)
-        #               .update_all(
-        #                 ebay_status: 'ended',
-        #                 last_sync_at: Time.current
-        #               )
-          
-        #   Rails.logger.info "Marked #{deleted_item_ids.size} listings as ended"
-        # end
 
         ebay_account.update(last_listing_import_at: Time.current)
       end

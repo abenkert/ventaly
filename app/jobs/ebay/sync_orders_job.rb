@@ -116,10 +116,11 @@ module Ebay
 
     def update_order_status(order, ebay_order)
       order_status = determine_order_status(ebay_order)
+      shipping_cost = calc_shipping_cost(ebay_order)
       order.assign_attributes(
         subtotal: ebay_order['pricingSummary']['priceSubtotal']['value'],
         total_price: ebay_order['pricingSummary']['total']['value'],
-        shipping_cost: ebay_order['pricingSummary']['deliveryCost']['value'],
+        shipping_cost: shipping_cost,
         fulfillment_status: order_status,
         payment_status: ebay_order['orderPaymentStatus'],
         paid_at: ebay_order['paymentSummary']['payments']&.first&.dig('paymentDate'),
@@ -140,6 +141,14 @@ module Ebay
       order_status = 'cancelled' if order_status == 'NOT_STARTED' && ebay_order['cancelStatus']['cancelState'] == 'CANCELED'
 
       order_status
+    end
+
+    def calc_shipping_cost(ebay_order)
+      shipping_cost = ebay_order['pricingSummary']['deliveryCost']['value']
+      shipping_discount = ebay_order['pricingSummary']['deliveryDiscount']['value']
+      # Shipping discount is a negative value, so we add it to the shipping cost
+      shipping_cost = shipping_cost + shipping_discount
+      shipping_cost
     end
 
     def map_fulfillment_status(status)
